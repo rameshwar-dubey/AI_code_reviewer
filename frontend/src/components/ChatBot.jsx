@@ -54,7 +54,7 @@ const ChatBot = () => {
   // Save current conversation to sidebar
   const saveConversation = (title) => {
     if (!currentConvId && messages.length > 1) {
-      const newId = Date.now();
+      const newId = Date.now() + Math.random();
       const newConversation = {
         id: newId,
         title: title || `Chat ${new Date().toLocaleDateString()}`,

@@ -55,6 +55,7 @@ api.interceptors.response.use(
 /**
  * Analyze code using automatic pipeline
  * Pipeline: ESLint → AST → ML Model → OpenAI
+ * Includes input validation
  */
 export const analyzeCode = async (code, language = "javascript") => {
   try {
@@ -64,6 +65,21 @@ export const analyzeCode = async (code, language = "javascript") => {
     return response.data;
   } catch (error) {
     console.error("❌ [PIPELINE] Analysis error:", error);
+
+    // Check for validation errors (400 status with validation info)
+    if (error.response?.status === 400 && error.response?.data?.validation) {
+      console.warn(
+        "⚠️ Input validation failed:",
+        error.response.data.validation,
+      );
+      const errorData = error.response.data;
+      return {
+        status: 400,
+        error: errorData.error,
+        validation: errorData.validation,
+        data: null,
+      };
+    }
 
     // Provide helpful error messages
     if (error.message.includes("not responding")) {
@@ -246,6 +262,57 @@ export const pipelineChatWithCode = async (
   } catch (error) {
     console.error("Pipeline chat error:", error);
     throw error;
+  }
+};
+
+/**
+ * ============ QUESTION PERSISTENCE ============
+ * Save and retrieve questions to/from database
+ */
+
+/**
+ * Save a question to the database
+ */
+export const saveQuestion = async (question, code, language = "javascript") => {
+  try {
+    const response = await api.post("/questions/save", {
+      question,
+      code,
+      language,
+      timestamp: new Date().toISOString(),
+    });
+    console.log("✅ Question saved successfully");
+    return response.data;
+  } catch (error) {
+    console.error("Error saving question:", error);
+    // Don't throw - this shouldn't block the chat
+    return null;
+  }
+};
+
+/**
+ * Get all questions from database
+ */
+export const getAllQuestions = async () => {
+  try {
+    const response = await api.get("/questions/all");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching questions:", error);
+    return [];
+  }
+};
+
+/**
+ * Get questions by language
+ */
+export const getQuestionsByLanguage = async (language) => {
+  try {
+    const response = await api.get(`/questions/language/${language}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching questions by language:", error);
+    return [];
   }
 };
 

@@ -11,9 +11,16 @@ import { OpenAI } from "openai";
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:5001";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-const openai = new OpenAI({
-  apiKey: OPENAI_API_KEY,
-});
+// Lazy-load OpenAI client to handle missing API key gracefully
+let openai = null;
+function getOpenAIClient() {
+  if (!openai && OPENAI_API_KEY) {
+    openai = new OpenAI({
+      apiKey: OPENAI_API_KEY,
+    });
+  }
+  return openai;
+}
 
 /**
  * Main pipeline: analyze code through all stages
@@ -32,7 +39,12 @@ export async function analyzeCodePipeline(code, language = "javascript") {
 
     // Stage 3: ML Model - Quality Score + Risk Level
     console.log("🤖 Stage 3: ML Model Analysis");
-    const mlAnalysis = await callMLService(code);
+    const mlAnalysis = await callMLService(code, language);
+
+    // Stage 3B: ML Error Detection & Correction
+    console.log("🔍 Stage 3B: ML Error Detection & Code Correction");
+    const mlErrorDetection = await callMLErrorDetection(code, language);
+    const mlCorrection = await callMLCodeCorrection(code, language);
 
     // Stage 4: OpenAI - Comprehensive Review + Optimized Code
     console.log("🧠 Stage 4: AI Review with OpenAI");
@@ -41,7 +53,12 @@ export async function analyzeCodePipeline(code, language = "javascript") {
       lintResults,
       astAnalysis,
       mlAnalysis,
+      mlErrorDetection,
     );
+
+    // Use ML corrected code if available, otherwise use AI optimized code
+    const finalCorrectedCode =
+      mlCorrection?.corrected_code || aiReview.optimized_code || code;
 
     // Combine all results
     const pipeline_result = {
@@ -52,15 +69,27 @@ export async function analyzeCodePipeline(code, language = "javascript") {
       errors: {
         lint: lintResults.errors || [],
         structural: astAnalysis.issues || [],
+        ml_detected: mlErrorDetection.errors || [],
         total_issues:
-          (lintResults.errors?.length || 0) + (astAnalysis.issues?.length || 0),
+          (lintResults.errors?.length || 0) +
+          (astAnalysis.issues?.length || 0) +
+          (mlErrorDetection.errors?.length || 0),
       },
 
-      // ML Scoring
+      // ML Analysis & Detection
       ml_analysis: {
         score: mlAnalysis.score,
         risk_level: mlAnalysis.risk_level,
         features: mlAnalysis.features,
+        errors_detected: mlErrorDetection.total_errors || 0,
+        warnings: mlErrorDetection.total_warnings || 0,
+        error_score: mlErrorDetection.error_score,
+      },
+
+      // ML Corrections
+      ml_corrections: {
+        fixes_applied: mlCorrection.fixes_applied || [],
+        improvements: mlCorrection.improvements || 0,
       },
 
       // AI Review
@@ -71,16 +100,22 @@ export async function analyzeCodePipeline(code, language = "javascript") {
         confidence: aiReview.confidence,
       },
 
+      // Final Corrected Code
+      corrected_code: finalCorrectedCode,
+
       // Summary
       summary: {
         total_errors:
-          (lintResults.errors?.length || 0) + (astAnalysis.issues?.length || 0),
+          (lintResults.errors?.length || 0) +
+          (astAnalysis.issues?.length || 0) +
+          (mlErrorDetection.errors?.length || 0),
         quality_score: Math.round(mlAnalysis.score),
         risk_assessment: mlAnalysis.risk_level,
         recommendation: generateRecommendation(
           mlAnalysis.score,
           mlAnalysis.risk_level,
         ),
+        ml_improvements: mlCorrection.improvements || 0,
       },
     };
 
@@ -123,11 +158,107 @@ async function callMLService(code) {
 }
 
 /**
+ * Call ML Service for error detection
+ */
+async function callMLErrorDetection(code, language = "python") {
+  try {
+    const mlServiceUrl = process.env.ML_SERVICE_URL || "http://localhost:5001";
+    const response = await fetch(`${mlServiceUrl}/detect-errors`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        code,
+        language,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`ML error detection failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log(
+      `✅ ML Error Detection: ${data.total_errors} errors, ${data.total_warnings} warnings detected`,
+    );
+    return data;
+  } catch (error) {
+    console.warn("⚠️ ML error detection unavailable:", error.message);
+    return {
+      success: false,
+      errors: [],
+      warnings: [],
+      total_errors: 0,
+      total_warnings: 0,
+      error_score: 50,
+    };
+  }
+}
+
+/**
+ * Call ML Service for code correction
+ */
+async function callMLCodeCorrection(code, language = "python") {
+  try {
+    const mlServiceUrl = process.env.ML_SERVICE_URL || "http://localhost:5001";
+    const response = await fetch(`${mlServiceUrl}/correct-code`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        code,
+        language,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`ML code correction failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log(
+      `✅ ML Code Correction: ${data.improvements} improvements applied`,
+    );
+    return data;
+  } catch (error) {
+    console.warn("⚠️ ML code correction unavailable:", error.message);
+    return {
+      success: false,
+      original_code: code,
+      corrected_code: code,
+      fixes_applied: [],
+      improvements: 0,
+    };
+  }
+}
+
+/**
  * Generate AI review using OpenAI
  */
-async function generateAIReview(code, lintResults, astAnalysis, mlAnalysis) {
+async function generateAIReview(
+  code,
+  lintResults,
+  astAnalysis,
+  mlAnalysis,
+  mlErrorDetection,
+) {
   try {
+    const client = getOpenAIClient();
+
+    if (!client) {
+      return {
+        explanation:
+          "AI review feature requires OPENAI_API_KEY to be configured",
+        suggestions: ["Configure OPENAI_API_KEY in .env file"],
+        optimized_code: code,
+        confidence: 0,
+      };
+    }
+
     const errorSummary = formatErrorSummary(lintResults, astAnalysis);
+    const mlErrorsSummary = formatMLErrorsSummary(mlErrorDetection);
 
     const prompt = `You are an expert code reviewer. Analyze this code and provide:
 1. A concise explanation of issues found
@@ -142,6 +273,9 @@ ${code}
 Issues found:
 ${errorSummary}
 
+ML Detected Issues:
+${mlErrorsSummary}
+
 ML Analysis Score: ${mlAnalysis.score}/100
 Risk Level: ${mlAnalysis.risk_level}
 
@@ -153,7 +287,7 @@ Respond in JSON format:
   "confidence": 0.95
 }`;
 
-    const response = await openai.chat.completions.create({
+    const response = await client.chat.completions.create({
       model: "gpt-4",
       messages: [
         {
@@ -219,6 +353,29 @@ function formatErrorSummary(lintResults, astAnalysis) {
 }
 
 /**
+ * Format ML detected errors summary for AI
+ */
+function formatMLErrorsSummary(mlErrorDetection) {
+  let summary = "";
+
+  if (mlErrorDetection.errors && mlErrorDetection.errors.length > 0) {
+    summary += "ML Detected Errors:\n";
+    mlErrorDetection.errors.forEach((error) => {
+      summary += `- [${error.type}] ${error.message} → ${error.suggestion}\n`;
+    });
+  }
+
+  if (mlErrorDetection.warnings && mlErrorDetection.warnings.length > 0) {
+    summary += "\nML Detected Warnings:\n";
+    mlErrorDetection.warnings.slice(0, 5).forEach((warning) => {
+      summary += `- [${warning.type}] ${warning.message} → ${warning.suggestion}\n`;
+    });
+  }
+
+  return summary || "No ML errors detected";
+}
+
+/**
  * Generate recommendation based on score and risk
  */
 function generateRecommendation(score, riskLevel) {
@@ -244,6 +401,20 @@ export async function chatAboutCode(
   language = "javascript",
 ) {
   try {
+    const client = getOpenAIClient();
+
+    if (!client) {
+      return {
+        response:
+          "Chat feature requires OPENAI_API_KEY to be configured. Please set OPENAI_API_KEY in your .env file.",
+        code_context: {
+          quality_score: 0,
+          risk_level: "Unknown",
+          issues_found: 0,
+        },
+      };
+    }
+
     // Quick lint + ML analysis
     const lintResults = await ESLintService.lint(code, language);
     const mlAnalysis = await callMLService(code);
@@ -257,7 +428,7 @@ Quality Score: ${mlAnalysis.score}/100
 Risk Level: ${mlAnalysis.risk_level}
 Issues: ${lintResults.errors?.length || 0} found`;
 
-    const response = await openai.chat.completions.create({
+    const response = await client.chat.completions.create({
       model: "gpt-4",
       messages: [
         {
@@ -296,6 +467,23 @@ export async function fixCode(
   specificFix = null,
 ) {
   try {
+    const client = getOpenAIClient();
+
+    if (!client) {
+      return {
+        original_code: code,
+        fixed_code: code,
+        changes: {
+          lines_changed: 0,
+          original_lines: 0,
+          fixed_lines: 0,
+          brevity_change: 0,
+        },
+        language,
+        error: "Fix feature requires OPENAI_API_KEY to be configured",
+      };
+    }
+
     const lintResults = await ESLintService.lint(code, language);
 
     let fixPrompt = `Fix and optimize this ${language} code:
@@ -314,7 +502,7 @@ ${code}
       fixPrompt += `\n\nSpecific requirement: ${specificFix}`;
     }
 
-    const response = await openai.chat.completions.create({
+    const response = await client.chat.completions.create({
       model: "gpt-4",
       messages: [
         {

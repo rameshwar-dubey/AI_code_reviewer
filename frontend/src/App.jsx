@@ -2,97 +2,65 @@
  * App Component - Main application container
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { FiGithub } from "react-icons/fi";
-import ChatBot from "./components/ChatBot";
+import Navbar from "./components/Navbar";
+import MainContent from "./components/MainContent";
+import Footer from "./components/Footer";
 import RepoAnalyzer from "./components/RepoAnalyzer";
 
 const App = () => {
   const [repoAnalyzerOpen, setRepoAnalyzerOpen] = useState(false);
+  const [theme, setTheme] = useState(() => {
+    const savedTheme = localStorage.getItem("app-theme");
+    if (savedTheme === "light" || savedTheme === "dark") return savedTheme;
+
+    return window.matchMedia("(prefers-color-scheme: light)").matches
+      ? "light"
+      : "dark";
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("app-theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      {/* Animated background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+    <div className="h-screen flex flex-col text-[var(--text-main)] relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none -z-10">
         <motion.div
-          className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full blur-3xl"
-          animate={{
-            x: [0, 100, 0],
-            y: [0, 100, 0],
-          }}
-          transition={{ duration: 20, repeat: Infinity }}
+          className="absolute top-[-20%] left-[-10%] h-[28rem] w-[28rem] rounded-full bg-teal-400/15 blur-3xl"
+          animate={{ x: [0, 40, -20, 0], y: [0, -30, 20, 0] }}
+          transition={{ duration: 18, repeat: Infinity }}
         />
         <motion.div
-          className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-purple-500/10 to-pink-500/10 rounded-full blur-3xl"
-          animate={{
-            x: [0, -100, 0],
-            y: [0, -100, 0],
+          className="absolute bottom-[-22%] right-[-12%] h-[30rem] w-[30rem] rounded-full bg-amber-400/15 blur-3xl"
+          animate={{ x: [0, -50, 25, 0], y: [0, 20, -30, 0] }}
+          transition={{ duration: 22, repeat: Infinity }}
+        />
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage:
+              "linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px)",
+            backgroundSize: "36px 36px",
           }}
-          transition={{ duration: 25, repeat: Infinity }}
         />
       </div>
 
-      {/* Header */}
-      <motion.header
-        className="glass border-b border-white/10 z-40"
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <motion.div
-                className="text-3xl font-bold"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 3, repeat: Infinity }}
-              >
-                *
-              </motion.div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  AI Code Reviewer
-                </h1>
-                <p className="text-xs text-slate-400">
-                  Interactive Code Analysis
-                </p>
-              </div>
-            </div>
+      <Navbar
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onOpenRepoAnalyzer={() => setRepoAnalyzerOpen(true)}
+      />
 
-            {/* Action buttons */}
-            <div className="flex items-center gap-2">
-              <motion.button
-                onClick={() => setRepoAnalyzerOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 glass-sm hover:bg-white/20 rounded-lg transition-all"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="Analyze GitHub repository"
-              >
-                <FiGithub size={18} />
-                <span className="hidden sm:inline text-sm">Analyze Repo</span>
-              </motion.button>
+      <MainContent />
 
-              <motion.a
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <FiGithub size={20} />
-              </motion.a>
-            </div>
-          </div>
-        </div>
-      </motion.header>
-
-      {/* ChatBot - Takes remaining space */}
-      <div className="flex-1 overflow-hidden">
-        <ChatBot />
-      </div>
+      <Footer />
 
       {/* Repository Analyzer Modal */}
       <RepoAnalyzer

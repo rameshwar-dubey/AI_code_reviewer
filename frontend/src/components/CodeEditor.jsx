@@ -39,6 +39,31 @@ const CodeEditor = ({
       setLoading?.(true);
       try {
         const result = await analyzeCode(codeToAnalyze, selectedLanguage);
+        
+        // Check for validation errors
+        if (result.status === 400 && result.validation) {
+          console.warn("⚠️ Validation failed:", result.validation);
+          const validation = result.validation;
+          
+          // Show validation error with suggestions
+          const validationWarnings = validation.warnings.map((w, idx) => ({
+            id: `validation-${idx}`,
+            level: w.startsWith("ERROR") ? "error" : "warning",
+            message: w
+          }));
+          
+          setIssues?.({
+            lint: validationWarnings,
+            validation: validation,
+            errors: validationWarnings.filter(e => e.level === "error"),
+            warnings: validationWarnings.filter(e => e.level === "warning")
+          });
+          
+          // Don't set analysis result if validation failed
+          setLoading?.(false);
+          return;
+        }
+        
         console.log('✅ Automatic analysis complete:', result);
         
         setAnalysisResult(result.data);

@@ -75,11 +75,9 @@ router.post("/deep-analyze", deepAnalyzeCode);
 router.post("/comprehensive-analysis", getComprehensiveAnalysis);
 
 /**
- * POST /chat
- * AI-powered chat for conversational code analysis and Q&A
- * Body: { message, code, language, analysisResults }
+ * NOTE: /chat route moved to chatRoutes.js (chatService-based)
+ * The old OpenAI-based chat is deprecated
  */
-router.post("/chat", codeChat);
 
 /**
  * POST /assess-quality

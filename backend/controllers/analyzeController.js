@@ -25,6 +25,7 @@ import {
   chatAboutCode,
   assessCodeQuality,
 } from "../services/aiService.js";
+import InputValidator from "../services/inputValidator.js";
 
 // Initialize ESLint on startup
 await initESLint();
@@ -37,11 +38,37 @@ export const analyzeCode = async (req, res) => {
     const { code, language = "javascript" } = req.body;
 
     if (!code) {
-      return res.status(400).json({ error: "Code is required" });
+      return res.status(400).json({
+        error: "Code is required",
+        validation: {
+          isValid: false,
+          warnings: [
+            "ERROR: No code provided. Please paste your code to analyze.",
+          ],
+          suggestions: ["✓ Paste valid code (functions, classes, logic, etc.)"],
+        },
+      });
+    }
+
+    // Validate input is actual code
+    const validation = InputValidator.validateCodeInput(code, language);
+
+    if (!validation.isValid) {
+      console.warn(
+        `[VALIDATE] Invalid input detected. Score: ${validation.score}%`,
+      );
+      console.warn(`[VALIDATE] Warnings:`, validation.warnings);
+
+      return res.status(400).json({
+        error:
+          "Invalid input: Please provide actual code, not text or descriptions",
+        validation: validation,
+        code: null,
+      });
     }
 
     console.log(
-      `[ANALYZE] Language: ${language}, Code length: ${code.length} chars`,
+      `[ANALYZE] ✓ Valid code input. Language: ${language}, Code length: ${code.length} chars`,
     );
 
     let issues = [];

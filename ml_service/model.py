@@ -6,7 +6,10 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from typing import Dict, Tuple
+import os
+import pickle
 from feature_extractor import CodeFeatureExtractor
+from input_validator import CodeInputValidator
 
 
 class CodeQualityModel:
@@ -24,6 +27,28 @@ class CodeQualityModel:
             'maintainability_score'
         ]
         self.is_trained = False
+        self.load_trained_model()
+        
+    def load_trained_model(self):
+        """Load trained model from pickle files"""
+        try:
+            models_dir = os.path.join(os.path.dirname(__file__), 'models')
+            model_path = os.path.join(models_dir, 'quality_model.pkl')
+            scaler_path = os.path.join(models_dir, 'scaler.pkl')
+            
+            if os.path.exists(model_path) and os.path.exists(scaler_path):
+                with open(model_path, 'rb') as f:
+                    self.model = pickle.load(f)
+                with open(scaler_path, 'rb') as f:
+                    self.scaler = pickle.load(f)
+                self.is_trained = True
+                print("✓ Trained ML model loaded successfully")
+            else:
+                print("⚠️  Trained model not found, using heuristic scoring")
+                print("   Run 'python train_model.py' to train the model")
+        except Exception as e:
+            print(f"⚠️  Failed to load trained model: {e}")
+            print("   Using heuristic scoring as fallback")
         
     def train(self, X_train: np.ndarray, y_train: np.ndarray):
         """Train the model"""
@@ -126,16 +151,30 @@ class CodeQualityModel:
 model_instance = CodeQualityModel()
 
 
-def extract_and_score(code: str) -> Dict:
+def extract_and_score(code: str, language: str = "python") -> Dict:
     """
-    Extract features and generate score for code
+    Extract features and generate score for code with validation
     
     Args:
         code: Source code string
+        language: Programming language
         
     Returns:
-        Dictionary with score, risk level, and features
+        Dictionary with score, risk level, features, and validation info
     """
+    # Validate input first
+    validation = CodeInputValidator.validate_code_input(code, language)
+    
+    if not validation["is_valid"]:
+        return {
+            'score': 0,
+            'risk_level': 'High',
+            'features': {},
+            'success': False,
+            'error': 'Invalid input: Please provide actual code',
+            'validation': validation
+        }
+    
     try:
         # Extract features
         features = CodeFeatureExtractor.extract_features(code)
@@ -147,7 +186,8 @@ def extract_and_score(code: str) -> Dict:
             'score': float(score),
             'risk_level': risk_level,
             'features': {k: float(v) for k, v in features.items()},
-            'success': True
+            'success': True,
+            'validation': validation
         }
     except Exception as e:
         return {
@@ -155,5 +195,6 @@ def extract_and_score(code: str) -> Dict:
             'risk_level': 'Medium',
             'features': {},
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'validation': validation
         }

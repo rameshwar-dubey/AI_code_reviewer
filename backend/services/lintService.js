@@ -315,25 +315,27 @@ export const getSeverityLevel = (severity) => {
  * Main ESLintService export
  */
 export const ESLintService = {
-  async lint(code, language = 'javascript') {
+  async lint(code, language = "javascript") {
     try {
-      if (language === 'python') {
+      if (language === "python") {
         return { errors: lintPython(code) };
-      } else if (language === 'java') {
+      } else if (language === "java") {
         return { errors: lintJava(code) };
       } else {
         // Default to JavaScript/TypeScript
         return { errors: await lintJavaScript(code) };
       }
     } catch (error) {
-      console.error('Linting error:', error);
+      console.error("Linting error:", error);
       return {
-        errors: [{
-          line: 1,
-          column: 1,
-          severity: 'error',
-          message: `Linting failed: ${error.message}`
-        }]
+        errors: [
+          {
+            line: 1,
+            column: 1,
+            severity: "error",
+            message: `Linting failed: ${error.message}`,
+          },
+        ],
       };
     }
   },
@@ -342,5 +344,5 @@ export const ESLintService = {
   lintPython,
   lintJava,
   getSeverityLevel,
-  initESLint
+  initESLint,
 };

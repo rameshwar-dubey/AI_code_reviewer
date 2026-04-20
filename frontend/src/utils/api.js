@@ -11,7 +11,46 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 30000, // 30 second timeout
 });
+
+// Add request interceptor for logging
+api.interceptors.request.use(
+  (config) => {
+    console.log(
+      `📡 [API] ${config.method.toUpperCase()} ${config.url}`,
+      config.data,
+    );
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
+// Add response interceptor for error handling
+api.interceptors.response.use(
+  (response) => {
+    console.log(`✅ [API] Response:`, response.data);
+    return response;
+  },
+  (error) => {
+    if (error.response) {
+      console.error(
+        `❌ [API] Error ${error.response.status}:`,
+        error.response.data,
+      );
+    } else if (error.request) {
+      console.error(
+        `❌ [API] No response - Backend may not be running:`,
+        error.request,
+      );
+      error.message =
+        "Backend server is not responding. Make sure the backend is running on port 5000.";
+    } else {
+      console.error(`❌ [API] Error:`, error.message);
+    }
+    return Promise.reject(error);
+  },
+);
 
 /**
  * Analyze code using automatic pipeline
@@ -19,15 +58,37 @@ const api = axios.create({
  */
 export const analyzeCode = async (code, language = "javascript") => {
   try {
+    console.log(`🚀 [PIPELINE] Starting analysis for ${language}...`);
     const response = await api.post("/pipeline/analyze", { code, language });
+    console.log(`✅ [PIPELINE] Analysis complete`);
     return response.data;
   } catch (error) {
-    console.error("Pipeline analysis error:", error);
-    // Fallback to old endpoint if pipeline not available
+    console.error("❌ [PIPELINE] Analysis error:", error);
+
+    // Provide helpful error messages
+    if (error.message.includes("not responding")) {
+      throw new Error(
+        "Backend server is not running. Please start it with: npm run dev",
+      );
+    }
+
+    if (error.response?.status === 404) {
+      throw new Error(
+        "Pipeline endpoint not found. Backend may not be updated.",
+      );
+    }
+
+    // Try fallback to old endpoint
     try {
+      console.log("🔄 [FALLBACK] Trying legacy endpoint...");
       const fallbackResponse = await api.post("/analyze", { code, language });
+      console.log("✅ [FALLBACK] Legacy endpoint worked");
       return fallbackResponse.data;
     } catch (fallbackError) {
+      console.error(
+        "❌ [FALLBACK] Legacy endpoint also failed:",
+        fallbackError,
+      );
       throw fallbackError;
     }
   }

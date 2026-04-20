@@ -11,7 +11,7 @@ import {
   FiCheck,
   FiMessageCircle,
 } from "react-icons/fi";
-import { reviewCode, chatWithAI, assessCodeQuality } from "../utils/api";
+import { analyzeCode, pipelineChatWithCode } from "../utils/api";
 
 const ChatBot = () => {
   const [messages, setMessages] = useState([
@@ -33,7 +33,6 @@ const ChatBot = () => {
   const [fileName, setFileName] = useState("");
   const [chatInput, setChatInput] = useState("");
   const [codeAnalyzed, setCodeAnalyzed] = useState(false);
-  const [qualityAssessment, setQualityAssessment] = useState(null);
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -95,7 +94,15 @@ const ChatBot = () => {
   // Handle code submission
   const handleSubmitCode = async () => {
     if (!code.trim()) {
-      alert("Please upload a file or paste code");
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          type: "bot",
+          text: "❌ Please upload a file or paste code",
+          details: ["You need to provide code to analyze"],
+        },
+      ]);
       return;
     }
 
@@ -114,37 +121,56 @@ const ChatBot = () => {
     setLoading(true);
 
     try {
-      const result = await reviewCode(code, language, []);
+      console.log("📊 Calling analyzeCode pipeline...");
+      const result = await analyzeCode(code, language);
+      console.log("✅ Analysis complete:", result);
 
-      // Add bot response with review
+      // Extract data from pipeline response
+      const data = result.data || result;
+
+      // Add bot response with full analysis
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now(),
           type: "bot",
-          text: "✅ Code Review Complete",
+          text: "✅ Code Analysis Complete",
           review: {
-            explanation: result.explanation,
-            suggestions: result.suggestions,
-            improvedCode: result.improvedCode,
+            explanation:
+              data.ai_review?.explanation || "Analysis completed successfully",
+            suggestions: data.ai_review?.suggestions || [],
+            improvedCode: data.ai_review?.optimized_code || "",
+          },
+          analysis: {
+            score: data.ml_analysis?.score,
+            risk: data.ml_analysis?.risk_level,
+            errors: data.summary?.total_errors,
           },
         },
       ]);
 
       // Enable chat mode
       setCodeAnalyzed(true);
-
-      // Clear input
-      setCode("");
-      setFileName("");
     } catch (error) {
+      console.error("❌ Analysis error:", error);
+      const errorMsg =
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to analyze code";
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now(),
           type: "bot",
           text: "❌ Error analyzing code",
-          details: [error.message || "Failed to review code"],
+          details: [
+            errorMsg,
+            "",
+            "Make sure:",
+            "• Backend is running on port 5000",
+            "• ML Service is running on port 5001",
+            "• OPENAI_API_KEY is configured",
+          ],
         },
       ]);
     } finally {
@@ -152,38 +178,26 @@ const ChatBot = () => {
     }
   };
 
-  // Handle quality assessment
-  const handleAssessQuality = async () => {
-    if (!code.trim()) return;
-
-    setLoading(true);
-    try {
-      const result = await assessCodeQuality(code, language);
-      setQualityAssessment(result.assessment);
-
-      // Add quality assessment message
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          type: "bot",
-          text: "📊 Code Quality Assessment",
-          quality: result.assessment,
-          issuesCount: result.issuesCount,
-        },
-      ]);
-
-      setCodeAnalyzed(true);
-    } catch (error) {
-      console.error("Quality assessment failed:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Handle quality assessment - REMOVED (now part of automatic pipeline)
 
   // Handle chat message submission
   const handleChatSubmit = async () => {
-    if (!chatInput.trim() || !code.trim()) return;
+    if (!chatInput.trim() || !code.trim()) {
+      if (!code.trim()) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            type: "bot",
+            text: "❌ Please analyze code first",
+            details: ["Use the Review button to analyze code before chatting"],
+          },
+        ]);
+      }
+      return;
+    }
+
+    const userMessage = chatInput;
 
     // Add user chat message
     setMessages((prev) => [
@@ -191,20 +205,21 @@ const ChatBot = () => {
       {
         id: Date.now(),
         type: "user",
-        text: chatInput,
+        text: userMessage,
       },
     ]);
 
+    // Clear chat input immediately
     setChatInput("");
+
     setLoading(true);
 
     try {
-      const result = await chatWithAI(
-        chatInput,
-        code,
-        language,
-        qualityAssessment,
-      );
+      console.log("💬 Sending chat message...");
+      const result = await pipelineChatWithCode(code, userMessage, language);
+      console.log("✅ Chat response:", result);
+
+      const response = result.data || result;
 
       // Add bot response
       setMessages((prev) => [
@@ -212,17 +227,36 @@ const ChatBot = () => {
         {
           id: Date.now(),
           type: "bot",
-          text: result.response,
+          text: response.response || "I couldn't process your question",
+          details: response.code_context
+            ? [
+                `Quality: ${response.code_context.quality_score}/100`,
+                `Risk: ${response.code_context.risk_level}`,
+                `Issues: ${response.code_context.issues_found}`,
+              ]
+            : [],
         },
       ]);
     } catch (error) {
+      console.error("❌ Chat error:", error);
+      const errorMsg =
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to process message";
+
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now(),
           type: "bot",
-          text: "❌ Error processing your question",
-          details: [error.message || "Failed to process"],
+          text: "❌ Error processing your message",
+          details: [
+            errorMsg,
+            "",
+            "Troubleshooting:",
+            "• Check backend is running",
+            "• Check OpenAI API key is set",
+          ],
         },
       ]);
     } finally {
@@ -496,19 +530,6 @@ const ChatBot = () => {
               <FiSend size={16} />
               Review
             </motion.button>
-
-            {/* Quality Assessment Button */}
-            {codeAnalyzed && (
-              <motion.button
-                onClick={handleAssessQuality}
-                disabled={!code.trim() || loading}
-                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded-lg transition-colors text-sm font-medium"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                📊 Assess Quality
-              </motion.button>
-            )}
           </div>
 
           {/* Text Area */}

@@ -169,3 +169,38 @@ export const analyzePython = (code) => {
 
   return analysis;
 };
+
+/**
+ * Main analyze function that dispatches to language-specific analyzers
+ */
+export const ASTService = {
+  async analyze(code, language = "javascript") {
+    try {
+      if (language === "python") {
+        return analyzePython(code);
+      } else if (
+        language === "javascript" ||
+        language === "typescript" ||
+        language === "jsx" ||
+        language === "tsx"
+      ) {
+        const { ast, error } = parseJavaScript(code);
+        if (error) {
+          return { issues: [error] };
+        }
+        return analyzeAST(ast);
+      } else {
+        // Fallback for other languages
+        return { issues: [] };
+      }
+    } catch (error) {
+      console.error("AST Analysis error:", error);
+      return { issues: [{ message: error.message }] };
+    }
+  },
+
+  parseJavaScript,
+  analyzeAST,
+  analyzePython,
+  getCodeLines,
+};

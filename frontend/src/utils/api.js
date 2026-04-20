@@ -14,15 +14,22 @@ const api = axios.create({
 });
 
 /**
- * Analyze code for issues and linting
+ * Analyze code using automatic pipeline
+ * Pipeline: ESLint → AST → ML Model → OpenAI
  */
 export const analyzeCode = async (code, language = "javascript") => {
   try {
-    const response = await api.post("/analyze", { code, language });
+    const response = await api.post("/pipeline/analyze", { code, language });
     return response.data;
   } catch (error) {
-    console.error("Analysis error:", error);
-    throw error;
+    console.error("Pipeline analysis error:", error);
+    // Fallback to old endpoint if pipeline not available
+    try {
+      const fallbackResponse = await api.post("/analyze", { code, language });
+      return fallbackResponse.data;
+    } catch (fallbackError) {
+      throw fallbackError;
+    }
   }
 };
 
@@ -150,6 +157,71 @@ export const assessCodeQuality = async (code, language = "javascript") => {
     return response.data;
   } catch (error) {
     console.error("Quality assessment error:", error);
+    throw error;
+  }
+};
+
+/**
+ * ============ PIPELINE FUNCTIONS ============
+ * These functions use the new automatic pipeline endpoints
+ */
+
+/**
+ * Chat with code using pipeline
+ * Message-based conversational analysis
+ */
+export const pipelineChatWithCode = async (
+  code,
+  message,
+  language = "javascript",
+) => {
+  try {
+    const response = await api.post("/pipeline/chat", {
+      code,
+      message,
+      language,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Pipeline chat error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fix and optimize code using pipeline
+ * Generates improved version of code
+ */
+export const pipelineFixCode = async (
+  code,
+  language = "javascript",
+  specificFix = null,
+) => {
+  try {
+    const response = await api.post("/pipeline/fix", {
+      code,
+      language,
+      specificFix,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Pipeline fix error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Batch analyze multiple code snippets
+ */
+export const pipelineBatchAnalyze = async (codes, language = "javascript") => {
+  try {
+    const response = await api.post("/pipeline/batch-analyze", {
+      codes,
+      language,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Pipeline batch analyze error:", error);
     throw error;
   }
 };

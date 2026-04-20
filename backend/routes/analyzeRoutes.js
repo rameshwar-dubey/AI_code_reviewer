@@ -14,6 +14,12 @@ import {
   codeChat,
   assessQuality,
 } from "../controllers/analyzeController.js";
+import {
+  analyzeCode as pipelineAnalyzeCode,
+  codeChat as pipelineChat,
+  fixCodeEndpoint,
+  batchAnalyze,
+} from "../controllers/pipelineController.js";
 
 const router = express.Router();
 
@@ -82,6 +88,44 @@ router.post("/chat", codeChat);
  * Body: { code, language }
  */
 router.post("/assess-quality", assessQuality);
+
+/**
+ * ============ AUTOMATIC PIPELINE ROUTES ============
+ * These routes implement the automatic code review pipeline
+ * ESLint → AST → ML Model → OpenAI
+ */
+
+/**
+ * POST /pipeline/analyze
+ * Automatic full pipeline analysis
+ * Body: { code, language }
+ * Returns: { errors, ml_analysis, ai_review, summary }
+ */
+router.post("/pipeline/analyze", pipelineAnalyzeCode);
+
+/**
+ * POST /pipeline/chat
+ * Chat-based code analysis with context
+ * Body: { code, message, language }
+ * Returns: { response, code_context }
+ */
+router.post("/pipeline/chat", pipelineChat);
+
+/**
+ * POST /pipeline/fix
+ * Generate fixed/optimized code
+ * Body: { code, language, specificFix }
+ * Returns: { original_code, fixed_code, changes }
+ */
+router.post("/pipeline/fix", fixCodeEndpoint);
+
+/**
+ * POST /pipeline/batch-analyze
+ * Analyze multiple code snippets
+ * Body: { codes, language }
+ * Returns: { total, results }
+ */
+router.post("/pipeline/batch-analyze", batchAnalyze);
 
 /**
  * GET /health

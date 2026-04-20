@@ -12,8 +12,12 @@ import {
   FiMessageCircle,
 } from "react-icons/fi";
 import { analyzeCode, pipelineChatWithCode } from "../utils/api";
+import Sidebar from "./Sidebar";
 
 const ChatBot = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [conversations, setConversations] = useState([]);
+  const [currentConvId, setCurrentConvId] = useState(null);
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -46,6 +50,71 @@ const ChatBot = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Save current conversation to sidebar
+  const saveConversation = (title) => {
+    if (!currentConvId && messages.length > 1) {
+      const newId = Date.now();
+      const newConversation = {
+        id: newId,
+        title: title || `Chat ${new Date().toLocaleDateString()}`,
+        messages: messages,
+        timestamp: new Date().toISOString(),
+        messageCount: messages.length,
+      };
+      setConversations([newConversation, ...conversations]);
+      setCurrentConvId(newId);
+    }
+  };
+
+  // Create new conversation
+  const handleNewConversation = () => {
+    // Save current conversation first
+    if (messages.length > 1) {
+      saveConversation();
+    }
+    // Reset chat
+    setMessages([
+      {
+        id: 1,
+        type: "bot",
+        text: "Hello! 👋 I'm your AI Code Reviewer. Ready for a new session?",
+        details: [
+          "• Upload a code file",
+          "• Paste your code directly",
+          "• I'll analyze it for errors, bugs, and improvements",
+        ],
+      },
+    ]);
+    setCode("");
+    setFileName("");
+    setChatInput("");
+    setCodeAnalyzed(false);
+    setCurrentConvId(null);
+    setSidebarOpen(false);
+  };
+
+  // Load conversation from sidebar
+  const handleLoadConversation = (convId) => {
+    const conversation = conversations.find((c) => c.id === convId);
+    if (conversation) {
+      setMessages(conversation.messages);
+      setCurrentConvId(convId);
+      setCode("");
+      setFileName("");
+      setChatInput("");
+      setCodeAnalyzed(false);
+      setSidebarOpen(false);
+    }
+  };
+
+  // Delete conversation
+  const handleDeleteConversation = (convId) => {
+    setConversations(conversations.filter((c) => c.id !== convId));
+    if (currentConvId === convId) {
+      handleNewConversation();
+    }
+  };
 
   // Handle file upload
   const handleFileUpload = (event) => {
@@ -129,25 +198,45 @@ const ChatBot = () => {
       const data = result.data || result;
 
       // Add bot response with full analysis
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          type: "bot",
-          text: "✅ Code Analysis Complete",
-          review: {
-            explanation:
-              data.ai_review?.explanation || "Analysis completed successfully",
-            suggestions: data.ai_review?.suggestions || [],
-            improvedCode: data.ai_review?.optimized_code || "",
+      setMessages((prev) => {
+        const updated = [
+          ...prev,
+          {
+            id: Date.now(),
+            type: "bot",
+            text: "✅ Code Analysis Complete",
+            review: {
+              explanation:
+                data.ai_review?.explanation || "Analysis completed successfully",
+              suggestions: data.ai_review?.suggestions || [],
+              improvedCode: data.ai_review?.optimized_code || "",
+            },
+            analysis: {
+              score: data.ml_analysis?.score,
+              risk: data.ml_analysis?.risk_level,
+              errors: data.summary?.total_errors,
+            },
           },
-          analysis: {
-            score: data.ml_analysis?.score,
-            risk: data.ml_analysis?.risk_level,
-            errors: data.summary?.total_errors,
-          },
-        },
-      ]);
+        ];
+        
+        // Auto-save conversation
+        setTimeout(() => {
+          if (!currentConvId && updated.length > 1) {
+            const newId = Date.now();
+            const newConversation = {
+              id: newId,
+              title: `Chat ${new Date().toLocaleDateString()}`,
+              messages: updated,
+              timestamp: new Date().toISOString(),
+              messageCount: updated.length,
+            };
+            setConversations((prev) => [newConversation, ...prev]);
+            setCurrentConvId(newId);
+          }
+        }, 0);
+        
+        return updated;
+      });
 
       // Enable chat mode
       setCodeAnalyzed(true);
@@ -222,21 +311,41 @@ const ChatBot = () => {
       const response = result.data || result;
 
       // Add bot response
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          type: "bot",
-          text: response.response || "I couldn't process your question",
-          details: response.code_context
-            ? [
-                `Quality: ${response.code_context.quality_score}/100`,
-                `Risk: ${response.code_context.risk_level}`,
-                `Issues: ${response.code_context.issues_found}`,
-              ]
-            : [],
-        },
-      ]);
+      setMessages((prev) => {
+        const updated = [
+          ...prev,
+          {
+            id: Date.now(),
+            type: "bot",
+            text: response.response || "I couldn't process your question",
+            details: response.code_context
+              ? [
+                  `Quality: ${response.code_context.quality_score}/100`,
+                  `Risk: ${response.code_context.risk_level}`,
+                  `Issues: ${response.code_context.issues_found}`,
+                ]
+              : [],
+          },
+        ];
+        
+        // Auto-save conversation
+        setTimeout(() => {
+          if (!currentConvId && updated.length > 1) {
+            const newId = Date.now();
+            const newConversation = {
+              id: newId,
+              title: `Chat ${new Date().toLocaleDateString()}`,
+              messages: updated,
+              timestamp: new Date().toISOString(),
+              messageCount: updated.length,
+            };
+            setConversations((prev) => [newConversation, ...prev]);
+            setCurrentConvId(newId);
+          }
+        }, 0);
+        
+        return updated;
+      });
     } catch (error) {
       console.error("❌ Chat error:", error);
       const errorMsg =
@@ -286,9 +395,22 @@ const ChatBot = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="flex h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Sidebar */}
+      <Sidebar
+        isOpen={sidebarOpen}
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        conversations={conversations}
+        currentId={currentConvId}
+        onSelectConversation={handleLoadConversation}
+        onNewConversation={handleNewConversation}
+        onDeleteConversation={handleDeleteConversation}
+      />
+
+      {/* Main Chat Area */}
+      <div className="flex flex-col flex-1">
+        {/* Messages Container */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <AnimatePresence>
           {messages.map((msg) => (
             <motion.div
@@ -506,19 +628,6 @@ const ChatBot = () => {
               Upload
             </motion.button>
 
-            {/* Language Selector */}
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500"
-            >
-              <option value="javascript">JavaScript</option>
-              <option value="python">Python</option>
-              <option value="typescript">TypeScript</option>
-              <option value="java">Java</option>
-              <option value="cpp">C++</option>
-            </select>
-
             {/* Submit Button */}
             <motion.button
               onClick={handleSubmitCode}
@@ -593,6 +702,7 @@ const ChatBot = () => {
           accept=".js,.jsx,.py,.ts,.tsx,.java,.cpp,.c,.cs"
           className="hidden"
         />
+      </div>
       </div>
     </div>
   );

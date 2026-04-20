@@ -3,7 +3,7 @@
  */
 
 import { motion } from "framer-motion";
-import { FiX, FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiX, FiPlus, FiTrash2, FiMessageCircle } from "react-icons/fi";
 
 const Sidebar = ({
   isOpen,

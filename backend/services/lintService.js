@@ -310,3 +310,39 @@ export const getSeverityLevel = (severity) => {
   };
   return severityMap[severity] || 2;
 };
+
+/**
+ * Main ESLintService export
+ */
+export const ESLintService = {
+  async lint(code, language = "javascript") {
+    try {
+      if (language === "python") {
+        return { errors: lintPython(code) };
+      } else if (language === "java") {
+        return { errors: lintJava(code) };
+      } else {
+        // Default to JavaScript/TypeScript
+        return { errors: await lintJavaScript(code) };
+      }
+    } catch (error) {
+      console.error("Linting error:", error);
+      return {
+        errors: [
+          {
+            line: 1,
+            column: 1,
+            severity: "error",
+            message: `Linting failed: ${error.message}`,
+          },
+        ],
+      };
+    }
+  },
+
+  lintJavaScript,
+  lintPython,
+  lintJava,
+  getSeverityLevel,
+  initESLint,
+};

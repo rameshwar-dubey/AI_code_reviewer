@@ -11,18 +11,102 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 30000, // 30 second timeout
 });
 
+// Add request interceptor for logging
+api.interceptors.request.use(
+  (config) => {
+    console.log(
+      `📡 [API] ${config.method.toUpperCase()} ${config.url}`,
+      config.data,
+    );
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
+// Add response interceptor for error handling
+api.interceptors.response.use(
+  (response) => {
+    console.log(`✅ [API] Response:`, response.data);
+    return response;
+  },
+  (error) => {
+    if (error.response) {
+      console.error(
+        `❌ [API] Error ${error.response.status}:`,
+        error.response.data,
+      );
+    } else if (error.request) {
+      console.error(
+        `❌ [API] No response - Backend may not be running:`,
+        error.request,
+      );
+      error.message =
+        "Backend server is not responding. Make sure the backend is running on port 5000.";
+    } else {
+      console.error(`❌ [API] Error:`, error.message);
+    }
+    return Promise.reject(error);
+  },
+);
+
 /**
- * Analyze code for issues and linting
+ * Analyze code using automatic pipeline
+ * Pipeline: ESLint → AST → ML Model → OpenAI
+ * Includes input validation
  */
 export const analyzeCode = async (code, language = "javascript") => {
   try {
-    const response = await api.post("/analyze", { code, language });
+    console.log(`🚀 [PIPELINE] Starting analysis for ${language}...`);
+    const response = await api.post("/pipeline/analyze", { code, language });
+    console.log(`✅ [PIPELINE] Analysis complete`);
     return response.data;
   } catch (error) {
-    console.error("Analysis error:", error);
-    throw error;
+    console.error("❌ [PIPELINE] Analysis error:", error);
+
+    // Check for validation errors (400 status with validation info)
+    if (error.response?.status === 400 && error.response?.data?.validation) {
+      console.warn(
+        "⚠️ Input validation failed:",
+        error.response.data.validation,
+      );
+      const errorData = error.response.data;
+      return {
+        status: 400,
+        error: errorData.error,
+        validation: errorData.validation,
+        data: null,
+      };
+    }
+
+    // Provide helpful error messages
+    if (error.message.includes("not responding")) {
+      throw new Error(
+        "Backend server is not running. Please start it with: npm run dev",
+      );
+    }
+
+    if (error.response?.status === 404) {
+      throw new Error(
+        "Pipeline endpoint not found. Backend may not be updated.",
+      );
+    }
+
+    // Try fallback to old endpoint
+    try {
+      console.log("🔄 [FALLBACK] Trying legacy endpoint...");
+      const fallbackResponse = await api.post("/analyze", { code, language });
+      console.log("✅ [FALLBACK] Legacy endpoint worked");
+      return fallbackResponse.data;
+    } catch (fallbackError) {
+      console.error(
+        "❌ [FALLBACK] Legacy endpoint also failed:",
+        fallbackError,
+      );
+      throw fallbackError;
+    }
   }
 };
 
@@ -150,6 +234,122 @@ export const assessCodeQuality = async (code, language = "javascript") => {
     return response.data;
   } catch (error) {
     console.error("Quality assessment error:", error);
+    throw error;
+  }
+};
+
+/**
+ * ============ PIPELINE FUNCTIONS ============
+ * These functions use the new automatic pipeline endpoints
+ */
+
+/**
+ * Chat with code using pipeline
+ * Message-based conversational analysis
+ */
+export const pipelineChatWithCode = async (
+  code,
+  message,
+  language = "javascript",
+) => {
+  try {
+    const response = await api.post("/pipeline/chat", {
+      code,
+      message,
+      language,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Pipeline chat error:", error);
+    throw error;
+  }
+};
+
+/**
+ * ============ QUESTION PERSISTENCE ============
+ * Save and retrieve questions to/from database
+ */
+
+/**
+ * Save a question to the database
+ */
+export const saveQuestion = async (question, code, language = "javascript") => {
+  try {
+    const response = await api.post("/questions/save", {
+      question,
+      code,
+      language,
+      timestamp: new Date().toISOString(),
+    });
+    console.log("✅ Question saved successfully");
+    return response.data;
+  } catch (error) {
+    console.error("Error saving question:", error);
+    // Don't throw - this shouldn't block the chat
+    return null;
+  }
+};
+
+/**
+ * Get all questions from database
+ */
+export const getAllQuestions = async () => {
+  try {
+    const response = await api.get("/questions/all");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching questions:", error);
+    return [];
+  }
+};
+
+/**
+ * Get questions by language
+ */
+export const getQuestionsByLanguage = async (language) => {
+  try {
+    const response = await api.get(`/questions/language/${language}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching questions by language:", error);
+    return [];
+  }
+};
+
+/**
+ * Fix and optimize code using pipeline
+ * Generates improved version of code
+ */
+export const pipelineFixCode = async (
+  code,
+  language = "javascript",
+  specificFix = null,
+) => {
+  try {
+    const response = await api.post("/pipeline/fix", {
+      code,
+      language,
+      specificFix,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Pipeline fix error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Batch analyze multiple code snippets
+ */
+export const pipelineBatchAnalyze = async (codes, language = "javascript") => {
+  try {
+    const response = await api.post("/pipeline/batch-analyze", {
+      codes,
+      language,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Pipeline batch analyze error:", error);
     throw error;
   }
 };

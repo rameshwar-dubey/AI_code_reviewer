@@ -1,4 +1,390 @@
 /**
+ * OutputPanel Component - Automatic Pipeline Results
+ * Displays: Errors, ML Analysis, AI Review, Optimized Code, Before/After
+ */
+
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FiChevronDown, FiAlertCircle, FiCheckCircle, FiInfo, FiCopy, FiDownload } from 'react-icons/fi';
+
+const TabButton = ({ active, onClick, children }) => (
+  <motion.button
+    onClick={onClick}
+    className={`px-4 py-2 rounded-lg transition-all ${ 
+      active
+        ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300 border border-blue-500/50'
+        : 'text-white/60 hover:text-white/90'
+    }`}
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+  >
+    {children}
+  </motion.button>
+);
+
+const ErrorItem = ({ error, type = 'lint' }) => {
+  const severityColors = {
+    critical: 'border-l-4 border-red-500 bg-red-500/10',
+    major: 'border-l-4 border-orange-500 bg-orange-500/10',
+    minor: 'border-l-4 border-yellow-500 bg-yellow-500/10',
+    error: 'border-l-4 border-red-500 bg-red-500/10',
+    warning: 'border-l-4 border-yellow-500 bg-yellow-500/10',
+  };
+
+  const severity = error.severity || error.level || 'minor';
+  
+  return (
+    <motion.div
+      className={`p-3 rounded ${severityColors[severity] || severityColors.minor}`}
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <div className="flex items-start gap-2">
+        {severity === 'critical' || severity === 'error' ? (
+          <FiAlertCircle className="text-red-400 mt-1 flex-shrink-0" />
+        ) : severity === 'major' || severity === 'warning' ? (
+          <FiInfo className="text-yellow-400 mt-1 flex-shrink-0" />
+        ) : (
+          <FiCheckCircle className="text-cyan-400 mt-1 flex-shrink-0" />
+        )}
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm">{error.rule || error.type || 'Issue'}</span>
+            <span className="text-xs text-white/50">
+              {error.line && `Line ${error.line}`}
+              {error.column && `, Col ${error.column}`}
+            </span>
+          </div>
+          <p className="text-sm text-white/70 mt-1">{error.message}</p>
+          {error.suggestion && <p className="text-xs text-cyan-400 mt-1">💡 {error.suggestion}</p>}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const CodeComparison = ({ originalCode, optimizedCode }) => {
+  const [copiedIndex, setCopiedIndex] = useState(null);
+
+  const handleCopy = (text, index) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      {/* Original Code */}
+      <div className="rounded-lg border border-white/10 bg-white/5 overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-2 bg-red-500/20 border-b border-red-500/30">
+          <span className="text-xs font-semibold text-red-300">ORIGINAL CODE</span>
+          <button
+            onClick={() => handleCopy(originalCode, 0)}
+            className="p-1 hover:bg-red-500/30 rounded transition-colors"
+            title="Copy"
+          >
+            <FiCopy size={14} className={copiedIndex === 0 ? 'text-green-400' : 'text-white/50'} />
+          </button>
+        </div>
+        <pre className="p-3 text-xs font-mono text-white/70 overflow-auto max-h-64">
+          {originalCode}
+        </pre>
+      </div>
+
+      {/* Optimized Code */}
+      <div className="rounded-lg border border-white/10 bg-white/5 overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-2 bg-green-500/20 border-b border-green-500/30">
+          <span className="text-xs font-semibold text-green-300">OPTIMIZED CODE</span>
+          <button
+            onClick={() => handleCopy(optimizedCode, 1)}
+            className="p-1 hover:bg-green-500/30 rounded transition-colors"
+            title="Copy"
+          >
+            <FiCopy size={14} className={copiedIndex === 1 ? 'text-green-400' : 'text-white/50'} />
+          </button>
+        </div>
+        <pre className="p-3 text-xs font-mono text-white/70 overflow-auto max-h-64">
+          {optimizedCode}
+        </pre>
+      </div>
+    </div>
+  );
+};
+
+const MLScoreDisplay = ({ score, riskLevel, features }) => {
+  const getRiskColor = (risk) => {
+    if (risk === 'Low') return 'from-green-500 to-emerald-500';
+    if (risk === 'Medium') return 'from-yellow-500 to-orange-500';
+    return 'from-red-500 to-rose-500';
+  };
+
+  const getRiskTextColor = (risk) => {
+    if (risk === 'Low') return 'text-green-400';
+    if (risk === 'Medium') return 'text-yellow-400';
+    return 'text-red-400';
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Score Gauge */}
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <div className="flex items-end justify-between mb-2">
+            <span className="text-sm text-white/60">Code Quality Score</span>
+            <span className="text-2xl font-bold text-white">{Math.round(score)}/100</span>
+          </div>
+          <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+            <motion.div
+              className={`h-full bg-gradient-to-r ${getRiskColor(riskLevel)}`}
+              initial={{ width: 0 }}
+              animate={{ width: `${score}%` }}
+              transition={{ duration: 1, ease: 'easeOut' }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Risk Level */}
+      <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
+        <span className="text-sm text-white/60">Risk Assessment</span>
+        <span className={`text-lg font-semibold ${getRiskTextColor(riskLevel)}`}>
+          {riskLevel}
+        </span>
+      </div>
+
+      {/* Key Features */}
+      {features && Object.keys(features).length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold text-white/60 uppercase">Key Metrics</h4>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(features)
+              .slice(0, 6)
+              .map(([key, value]) => (
+                <div key={key} className="p-2 rounded bg-white/5 border border-white/10">
+                  <div className="text-xs text-white/50 capitalize">{key.replace(/_/g, ' ')}</div>
+                  <div className="text-sm font-mono text-white/80">
+                    {typeof value === 'number' ? value.toFixed(2) : value}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default function OutputPanel({ analysisResult, loading }) {
+  const [activeTab, setActiveTab] = useState('summary');
+  const [expandedErrors, setExpandedErrors] = useState({});
+
+  if (!analysisResult && !loading) {
+    return (
+      <motion.div
+        className="h-full flex items-center justify-center text-white/50 text-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
+        <div>
+          <FiInfo size={32} className="mx-auto mb-2 opacity-50" />
+          <p>Write code to see analysis results</p>
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      className="h-full flex flex-col bg-gradient-to-br from-slate-900/40 to-slate-800/40 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: 0.1 }}
+    >
+      {/* Tabs */}
+      <div className="flex gap-2 p-4 border-b border-white/10 bg-white/5 overflow-x-auto">
+        <TabButton
+          active={activeTab === 'summary'}
+          onClick={() => setActiveTab('summary')}
+        >
+          📊 Summary
+        </TabButton>
+        <TabButton
+          active={activeTab === 'errors'}
+          onClick={() => setActiveTab('errors')}
+        >
+          ⚠️ Errors ({analysisResult?.summary?.total_errors || 0})
+        </TabButton>
+        <TabButton
+          active={activeTab === 'ml'}
+          onClick={() => setActiveTab('ml')}
+        >
+          🤖 ML Analysis
+        </TabButton>
+        <TabButton
+          active={activeTab === 'comparison'}
+          onClick={() => setActiveTab('comparison')}
+        >
+          🔄 Before/After
+        </TabButton>
+        <TabButton
+          active={activeTab === 'ai'}
+          onClick={() => setActiveTab('ai')}
+        >
+          🧠 AI Review
+        </TabButton>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <AnimatePresence mode="wait">
+          {loading ? (
+            <motion.div
+              key="loading"
+              className="flex items-center justify-center h-full"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <div className="text-center">
+                <div className="animate-spin inline-block mb-2">
+                  <div className="w-8 h-8 border-2 border-blue-500/50 border-t-blue-500 rounded-full"></div>
+                </div>
+                <p className="text-sm text-white/60">Analyzing code...</p>
+              </div>
+            </motion.div>
+          ) : analysisResult ? (
+            <>
+              {/* Summary Tab */}
+              {activeTab === 'summary' && (
+                <motion.div
+                  key="summary"
+                  className="space-y-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30">
+                      <div className="text-xs text-red-300/60">Total Errors</div>
+                      <div className="text-2xl font-bold text-red-300">{analysisResult.summary?.total_errors || 0}</div>
+                    </div>
+                    <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                      <div className="text-xs text-blue-300/60">Quality Score</div>
+                      <div className="text-2xl font-bold text-blue-300">{analysisResult.summary?.quality_score || 0}/100</div>
+                    </div>
+                    <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                      <div className="text-xs text-amber-300/60">Risk Level</div>
+                      <div className="text-2xl font-bold text-amber-300">{analysisResult.summary?.risk_assessment || 'Unknown'}</div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+                    <h4 className="text-sm font-semibold mb-2">Recommendation</h4>
+                    <p className="text-sm text-white/70">{analysisResult.summary?.recommendation}</p>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Errors Tab */}
+              {activeTab === 'errors' && (
+                <motion.div
+                  key="errors"
+                  className="space-y-3"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  {analysisResult.errors?.lint?.length > 0 ? (
+                    analysisResult.errors.lint.map((error, idx) => (
+                      <ErrorItem key={idx} error={error} type="lint" />
+                    ))
+                  ) : (
+                    <div className="text-center py-6 text-white/50">
+                      <FiCheckCircle size={32} className="mx-auto mb-2" />
+                      <p>No linting errors found</p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* ML Analysis Tab */}
+              {activeTab === 'ml' && (
+                <motion.div
+                  key="ml"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <MLScoreDisplay
+                    score={analysisResult.ml_analysis?.score}
+                    riskLevel={analysisResult.ml_analysis?.risk_level}
+                    features={analysisResult.ml_analysis?.features}
+                  />
+                </motion.div>
+              )}
+
+              {/* Before/After Tab */}
+              {activeTab === 'comparison' && analysisResult.ai_review?.optimized_code && (
+                <motion.div
+                  key="comparison"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <CodeComparison
+                    originalCode={analysisResult.ai_review.optimized_code}
+                    optimizedCode={analysisResult.ai_review.optimized_code}
+                  />
+                </motion.div>
+              )}
+
+              {/* AI Review Tab */}
+              {activeTab === 'ai' && (
+                <motion.div
+                  key="ai"
+                  className="space-y-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30">
+                    <h4 className="text-sm font-semibold mb-2">AI Analysis</h4>
+                    <p className="text-sm text-white/70 leading-relaxed">
+                      {analysisResult.ai_review?.explanation || 'No AI review available'}
+                    </p>
+                  </div>
+
+                  {analysisResult.ai_review?.suggestions && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-semibold">Suggestions</h4>
+                      {analysisResult.ai_review.suggestions.map((suggestion, idx) => (
+                        <div key={idx} className="p-3 rounded bg-white/5 border-l-2 border-cyan-500/50">
+                          <p className="text-sm text-white/70">{suggestion}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </>
+          ) : (
+            <motion.div
+              key="empty"
+              className="flex items-center justify-center h-full text-white/50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <p>No analysis data</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+}
+/**
  * OutputPanel Component - Displays linting issues, AI feedback, and security analysis
  */
 

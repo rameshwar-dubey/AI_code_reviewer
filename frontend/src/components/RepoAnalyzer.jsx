@@ -39,27 +39,36 @@ const RepoAnalyzer = ({ isOpen, onClose }) => {
 
   return (
     <motion.div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
       <motion.div
-        className="glass rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+        className="glass max-w-3xl w-full max-h-[86vh] overflow-y-auto"
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
-        <div className="p-6">
+        <div className="p-5 md:p-7">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <FiGithub size={24} />
-              <h2 className="text-2xl font-bold">GitHub Repository Analyzer</h2>
+              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-teal-400 to-amber-400 text-slate-900 flex items-center justify-center">
+                <FiGithub size={22} />
+              </div>
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold">
+                  GitHub Repository Analyzer
+                </h2>
+                <p className="text-xs uppercase tracking-[0.16em] text-[var(--text-muted)] mt-1">
+                  Scan Files, Risks, And Suggestions
+                </p>
+              </div>
             </div>
             <motion.button
               onClick={onClose}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 hover:bg-[var(--bg-2)] rounded-lg transition-colors"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -69,18 +78,18 @@ const RepoAnalyzer = ({ isOpen, onClose }) => {
 
           {/* Input Form */}
           <form onSubmit={handleAnalyze} className="mb-6">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 placeholder="Paste GitHub repo URL (e.g., https://github.com/owner/repo)"
                 value={repoUrl}
                 onChange={(e) => setRepoUrl(e.target.value)}
-                className="flex-1 px-4 py-2 bg-white/5 border border-white/20 rounded-lg focus:outline-none focus:border-blue-500/50 transition-colors"
+                className="flex-1 px-4 py-3 bg-[var(--bg-0)] border border-[var(--line-soft)] rounded-xl focus:outline-none focus:border-[var(--accent)] transition-colors"
               />
               <motion.button
                 type="submit"
                 disabled={loading || !repoUrl.trim()}
-                className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-6 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-xl text-slate-900 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -93,7 +102,7 @@ const RepoAnalyzer = ({ isOpen, onClose }) => {
           {/* Error Message */}
           {error && (
             <motion.div
-              className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-300"
+              className="mb-6 p-4 bg-red-500/12 border border-red-400/40 rounded-xl text-red-200"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
             >
@@ -110,11 +119,11 @@ const RepoAnalyzer = ({ isOpen, onClose }) => {
               animate={{ opacity: 1, y: 0 }}
             >
               {/* Repository Info */}
-              <div className="glass-sm p-4">
+              <div className="glass-sm p-4 rounded-xl">
                 <h3 className="font-semibold mb-2">
                   {repoResults.repository.owner}/{repoResults.repository.repo}
                 </h3>
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-[var(--text-muted)]">
                   Analyzed {repoResults.totalFilesAnalyzed} files
                 </p>
               </div>
@@ -122,11 +131,13 @@ const RepoAnalyzer = ({ isOpen, onClose }) => {
               {/* Files analyzed */}
               {repoResults.files.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-sm">Files Analyzed</h4>
+                  <h4 className="font-semibold text-sm text-teal-200">
+                    Files Analyzed
+                  </h4>
                   {repoResults.files.map((file, index) => (
                     <motion.div
                       key={index}
-                      className="glass-sm p-3"
+                      className="glass-sm p-3 rounded-xl"
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05 }}
@@ -134,18 +145,21 @@ const RepoAnalyzer = ({ isOpen, onClose }) => {
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="font-medium text-sm">{file.name}</p>
-                          <p className="text-xs text-slate-400 mt-1">
+                          <p className="text-xs text-[var(--text-muted)] mt-1">
                             {file.language} • {file.linesOfCode} lines
                           </p>
                         </div>
-                        <span className="text-xs bg-red-500/30 text-red-300 px-2 py-1 rounded">
+                        <span className="text-xs bg-amber-500/20 text-amber-200 px-2 py-1 rounded-full">
                           {file.issues.length} issues
                         </span>
                       </div>
                       {file.issues.length > 0 && (
                         <div className="mt-2 space-y-1">
                           {file.issues.slice(0, 3).map((issue, i) => (
-                            <p key={i} className="text-xs text-slate-400">
+                            <p
+                              key={i}
+                              className="text-xs text-[var(--text-muted)]"
+                            >
                               Line {issue.line}: {issue.message}
                             </p>
                           ))}
@@ -165,7 +179,7 @@ const RepoAnalyzer = ({ isOpen, onClose }) => {
 
           {/* Empty State */}
           {!repoResults && !loading && !error && (
-            <div className="text-center py-8 text-slate-400">
+            <div className="text-center py-8 text-[var(--text-muted)]">
               <p>Enter a GitHub repository URL to analyze</p>
             </div>
           )}

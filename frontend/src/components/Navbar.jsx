@@ -4,7 +4,7 @@ import { FiGithub, FiMoon, FiSun } from "react-icons/fi";
 const Navbar = ({ theme, onToggleTheme, onOpenRepoAnalyzer }) => {
   return (
     <motion.header
-      className="sticky top-0 z-50 w-full px-3 pt-3 md:px-4"
+      className="sticky top-0 z-50 w-full shrink-0 px-3 pt-3 md:px-4"
       initial={{ y: -40, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.35 }}
@@ -32,7 +32,7 @@ const Navbar = ({ theme, onToggleTheme, onOpenRepoAnalyzer }) => {
           <div className="flex items-center gap-2 md:gap-3">
             <motion.button
               onClick={onToggleTheme}
-              className="p-2.5 rounded-xl border border-[var(--line-soft)] bg-[rgba(11,21,36,0.85)] hover:bg-[rgba(20,34,55,0.95)] transition-colors"
+              className="p-2.5 rounded-xl border border-[var(--line-soft)] bg-[var(--surface-elevated)] hover:bg-[var(--bg-2)] transition-colors"
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.95 }}
               title={
@@ -50,7 +50,7 @@ const Navbar = ({ theme, onToggleTheme, onOpenRepoAnalyzer }) => {
 
             <motion.button
               onClick={onOpenRepoAnalyzer}
-              className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-[var(--line-soft)] bg-[rgba(11,21,36,0.85)] hover:bg-[rgba(20,34,55,0.95)] transition-all text-[13px] md:text-sm"
+              className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-[var(--line-soft)] bg-[var(--surface-elevated)] hover:bg-[var(--bg-2)] transition-all text-[13px] md:text-sm"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Analyze GitHub repository"

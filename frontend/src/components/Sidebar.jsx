@@ -19,12 +19,12 @@ const Sidebar = ({
       {/* Toggle Button */}
       <motion.button
         onClick={onToggle}
-        className="fixed top-5 left-5 z-50 flex items-center justify-center w-12 h-12 rounded-xl border border-[var(--line-soft)] bg-[rgba(11,21,36,0.92)] hover:bg-[rgba(20,34,55,0.98)] shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-colors"
+        className="absolute top-4 left-4 z-50 flex items-center justify-center w-10 h-10 rounded-xl border border-[var(--line-soft)] bg-[var(--surface-elevated)] hover:bg-[var(--surface)] shadow-lg transition-colors"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         title="Toggle Sidebar"
       >
-        <FiMenu size={20} className="text-teal-300" />
+        <FiMenu size={20} className="text-[var(--accent)]" />
       </motion.button>
 
       {/* Sidebar */}
@@ -32,7 +32,7 @@ const Sidebar = ({
         initial={{ x: -400 }}
         animate={{ x: isOpen ? 0 : -400 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="fixed top-0 left-0 h-screen w-[85vw] max-w-80 md:w-80 bg-[rgba(7,14,25,0.96)] backdrop-blur-xl border-r border-[var(--line-soft)] z-40 flex flex-col shadow-2xl"
+        className="fixed top-0 left-0 h-screen w-[85vw] max-w-80 md:w-80 bg-[var(--surface-elevated)] backdrop-blur-xl border-r border-[var(--line-soft)] z-40 flex flex-col shadow-2xl"
       >
         {/* Header */}
         <div className="p-4 border-b border-[var(--line-soft)] flex items-center justify-between">
@@ -42,7 +42,7 @@ const Sidebar = ({
           </h2>
           <button
             onClick={onToggle}
-            className="p-2 hover:bg-[rgba(29,43,67,0.95)] rounded-lg transition-colors"
+            className="p-2 hover:bg-[var(--bg-2)] rounded-lg transition-colors"
           >
             <FiX size={20} className="text-[var(--text-muted)]" />
           </button>
@@ -72,8 +72,8 @@ const Sidebar = ({
                 key={conv.id}
                 className={`p-3 rounded-lg cursor-pointer transition-all group ${
                   currentId === conv.id
-                    ? "bg-teal-500/15 border border-teal-300/40"
-                    : "bg-[rgba(14,24,40,0.8)] hover:bg-[rgba(20,33,54,0.92)] border border-transparent"
+                    ? "bg-[var(--accent)]/15 border border-[var(--accent)]/30"
+                    : "bg-[var(--bg-0)] hover:bg-[var(--bg-1)] border border-transparent"
                 }`}
                 whileHover={{ x: 4 }}
               >

@@ -456,7 +456,7 @@ const ChatBot = () => {
   };
 
   return (
-    <div className="flex h-full rounded-2xl border border-[var(--line-soft)] bg-[rgba(7,14,25,0.7)] backdrop-blur-md overflow-hidden shadow-[0_25px_55px_rgba(0,0,0,0.35)]">
+    <div className="flex-1 w-full flex relative rounded-2xl border border-[var(--line-soft)] bg-[var(--surface)] backdrop-blur-md overflow-hidden shadow-xl">
       {/* Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
@@ -469,9 +469,9 @@ const ChatBot = () => {
       />
 
       {/* Main Chat Area */}
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col flex-1 min-w-0">
         {/* Messages Container */}
-        <div className="flex-1 overflow-y-auto p-3 md:p-5 space-y-4">
+        <div className="flex-1 overflow-y-auto p-3 mt-14 md:mt-0 md:p-5 space-y-4">
           <AnimatePresence>
             {messages.map((msg) => (
               <motion.div
@@ -485,7 +485,7 @@ const ChatBot = () => {
                   className={`max-w-2xl ${
                     msg.type === "user"
                       ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-slate-900 rounded-bl-2xl rounded-tl-2xl rounded-tr-md shadow-[0_10px_25px_rgba(20,184,166,0.35)]"
-                      : "bg-[rgba(20,33,54,0.92)] text-[var(--text-main)] border border-[var(--line-soft)] rounded-br-2xl rounded-tr-2xl rounded-tl-md"
+                      : "bg-[var(--bg-1)] text-[var(--text-main)] border border-[var(--line-soft)] rounded-br-2xl rounded-tr-2xl rounded-tl-md"
                   } p-4 space-y-2`}
                 >
                   {/* Main text */}
@@ -502,27 +502,27 @@ const ChatBot = () => {
 
                   {/* Code Preview */}
                   {msg.code && (
-                    <div className="bg-[rgba(3,9,18,0.92)] rounded-lg p-2 text-xs mono overflow-x-auto border border-[var(--line-soft)]">
+                    <div className="bg-[var(--bg-0)] rounded-lg p-2 text-xs mono overflow-x-auto border border-[var(--line-soft)]">
                       <pre>{msg.code}</pre>
                     </div>
                   )}
 
                   {/* Review Results */}
                   {msg.review && (
-                    <div className="space-y-3 text-xs mt-2 bg-[rgba(4,10,19,0.72)] rounded-xl p-3 border border-[var(--line-soft)]">
+                    <div className="space-y-3 text-xs mt-2 bg-[var(--bg-2)] rounded-xl p-3 border border-[var(--line-soft)]">
                       {/* CORRECTED CODE - SHOWN FIRST (Main Output) */}
                       {msg.review.improvedCode && (
                         <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-lg p-3 border border-amber-400/35">
-                          <h4 className="font-bold text-amber-200 mb-2 flex items-center gap-2">
+                          <h4 className="font-bold text-amber-500 dark:text-amber-200 mb-2 flex items-center gap-2">
                             <span className="text-lg">✨</span> Corrected Code
                             (Fixed)
                           </h4>
-                          <div className="bg-[rgba(8,16,28,0.95)] rounded p-3 max-h-64 overflow-auto border border-amber-300/20">
-                            <pre className="text-xs mono text-amber-100 whitespace-pre-wrap break-words">
+                          <div className="bg-[var(--bg-0)] rounded p-3 max-h-64 overflow-auto border border-amber-300/20">
+                            <pre className="text-xs mono text-[var(--text-main)] whitespace-pre-wrap break-words">
                               {msg.review.improvedCode}
                             </pre>
                           </div>
-                          <p className="text-amber-100/80 mt-2 text-xs">
+                          <p className="text-amber-600 dark:text-amber-100/80 mt-2 text-xs">
                             ✓ This is the corrected version of your code with
                             all issues fixed.
                           </p>
@@ -549,19 +549,19 @@ const ChatBot = () => {
                             Detection
                           </h4>
                           <div className="grid grid-cols-2 gap-2 mb-3">
-                            <div className="bg-[rgba(8,16,28,0.85)] rounded p-2">
-                              <p className="text-cyan-100 text-xs font-semibold">
+                            <div className="bg-[var(--bg-0)] rounded p-2">
+                              <p className="text-[var(--accent-strong)] text-xs font-semibold">
                                 Errors Detected
                               </p>
-                              <p className="text-cyan-50 text-lg font-bold">
+                              <p className="text-[var(--text-main)] text-lg font-bold">
                                 {msg.ml_detection.errors_found}
                               </p>
                             </div>
-                            <div className="bg-[rgba(8,16,28,0.85)] rounded p-2">
-                              <p className="text-amber-100 text-xs font-semibold">
+                            <div className="bg-[var(--bg-0)] rounded p-2">
+                              <p className="text-[var(--accent-2)] text-xs font-semibold">
                                 Warnings
                               </p>
-                              <p className="text-amber-50 text-lg font-bold">
+                              <p className="text-[var(--text-main)] text-lg font-bold">
                                 {msg.ml_detection.warnings_found}
                               </p>
                             </div>
@@ -634,7 +634,7 @@ const ChatBot = () => {
 
                   {/* Quality Assessment */}
                   {msg.quality && (
-                    <div className="space-y-3 text-xs mt-2 bg-[rgba(4,10,19,0.72)] rounded-xl p-3 border border-[var(--line-soft)]">
+                    <div className="space-y-3 text-xs mt-2 bg-[var(--bg-2)] rounded-xl p-3 border border-[var(--line-soft)]">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-semibold text-cyan-200">
                           Quality Score
@@ -713,11 +713,11 @@ const ChatBot = () => {
               animate={{ opacity: 1 }}
               className="flex justify-start"
             >
-              <div className="bg-[rgba(20,33,54,0.92)] border border-[var(--line-soft)] text-[var(--text-main)] rounded-br-2xl rounded-tr-2xl rounded-tl-lg p-4">
+              <div className="bg-[var(--bg-1)] border border-[var(--line-soft)] text-[var(--text-main)] rounded-br-2xl rounded-tr-2xl rounded-tl-lg p-4">
                 <div className="flex gap-2">
-                  <div className="w-2 h-2 bg-teal-300 rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-teal-300 rounded-full animate-bounce delay-100" />
-                  <div className="w-2 h-2 bg-teal-300 rounded-full animate-bounce delay-200" />
+                  <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" />
+                  <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce delay-100" />
+                  <div className="w-2 h-2 bg-teal-400 rounded-full animate-bounce delay-200" />
                 </div>
               </div>
             </motion.div>
@@ -727,7 +727,7 @@ const ChatBot = () => {
         </div>
 
         {/* Input Area */}
-        <div className="border-t border-[var(--line-soft)] bg-[rgba(8,16,28,0.94)] p-3 md:p-4 space-y-3">
+        <div className="border-t border-[var(--line-soft)] bg-[var(--surface-elevated)] p-3 md:p-4 space-y-3 shrink-0">
           {/* File info */}
           {fileName && (
             <motion.div
@@ -755,7 +755,7 @@ const ChatBot = () => {
               {/* Upload Button */}
               <motion.button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-2 bg-[rgba(24,39,62,0.95)] hover:bg-[rgba(35,54,83,0.95)] border border-[var(--line-soft)] rounded-lg transition-colors text-sm font-medium text-[var(--text-main)]"
+                className="flex items-center gap-2 px-4 py-2 bg-[var(--bg-1)] hover:bg-[var(--bg-2)] border border-[var(--line-soft)] rounded-lg transition-colors text-sm font-medium text-[var(--text-main)]"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -783,7 +783,7 @@ const ChatBot = () => {
               onChange={(e) => setCode(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Paste your code here... (or upload a file above)"
-              className="w-full px-4 py-2 bg-[rgba(9,18,31,0.82)] border border-[var(--line-soft)] rounded-lg text-[var(--text-main)] text-sm focus:outline-none focus:border-teal-400 resize-none"
+              className="w-full px-4 py-2 bg-[var(--bg-0)] border border-[var(--line-soft)] rounded-lg text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--accent)] resize-none"
               rows={3}
             />
 
@@ -807,7 +807,7 @@ const ChatBot = () => {
                 </span>
                 <motion.button
                   onClick={() => setChatCollapsed(!chatCollapsed)}
-                  className="flex items-center gap-1 px-2 py-1 hover:bg-[rgba(29,43,67,0.9)] rounded transition-colors text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                  className="flex items-center gap-1 px-2 py-1 hover:bg-[var(--bg-2)] rounded transition-colors text-[var(--text-muted)] hover:text-[var(--text-main)]"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -843,7 +843,7 @@ const ChatBot = () => {
                           onChange={(e) => setChatInput(e.target.value)}
                           onKeyPress={handleChatKeyPress}
                           placeholder="Ask a question about your code... (Ctrl+Enter to send)"
-                          className="flex-1 px-3 py-2 bg-[rgba(9,18,31,0.82)] border border-[var(--line-soft)] rounded-lg text-[var(--text-main)] text-sm focus:outline-none focus:border-cyan-400 resize-none"
+                          className="flex-1 px-3 py-2 bg-[var(--bg-0)] border border-[var(--line-soft)] rounded-lg text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--accent)] resize-none"
                           rows={2}
                         />
 

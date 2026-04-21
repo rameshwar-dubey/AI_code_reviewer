@@ -68,7 +68,7 @@ const RepoAnalyzer = ({ isOpen, onClose }) => {
             </div>
             <motion.button
               onClick={onClose}
-              className="p-2 hover:bg-[rgba(29,43,67,0.95)] rounded-lg transition-colors"
+              className="p-2 hover:bg-[var(--bg-2)] rounded-lg transition-colors"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -84,7 +84,7 @@ const RepoAnalyzer = ({ isOpen, onClose }) => {
                 placeholder="Paste GitHub repo URL (e.g., https://github.com/owner/repo)"
                 value={repoUrl}
                 onChange={(e) => setRepoUrl(e.target.value)}
-                className="flex-1 px-4 py-3 bg-[rgba(9,18,31,0.82)] border border-[var(--line-soft)] rounded-xl focus:outline-none focus:border-teal-400/60 transition-colors"
+                className="flex-1 px-4 py-3 bg-[var(--bg-0)] border border-[var(--line-soft)] rounded-xl focus:outline-none focus:border-[var(--accent)] transition-colors"
               />
               <motion.button
                 type="submit"

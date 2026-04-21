@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 const Footer = () => {
   return (
     <motion.footer
-      className="w-full px-3 pb-3 md:px-4 md:pb-4"
+      className="w-full shrink-0 px-3 pb-3 md:px-4 md:pb-4"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: 0.1 }}

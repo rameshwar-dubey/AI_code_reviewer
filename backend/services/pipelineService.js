@@ -9,17 +9,23 @@ import { ASTService } from "./astService.js";
 import { OpenAI } from "openai";
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:5001";
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // Lazy-load OpenAI client to handle missing API key gracefully
 let openai = null;
 function getOpenAIClient() {
-  if (!openai && OPENAI_API_KEY) {
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  if (!openai && apiKey && !apiKey.includes("placeholder")) {
     openai = new OpenAI({
-      apiKey: OPENAI_API_KEY,
+      apiKey,
     });
   }
+
   return openai;
+}
+
+function getOpenAIModel() {
+  return process.env.OPENAI_MODEL || "gpt-4o-mini";
 }
 
 /**
@@ -288,7 +294,7 @@ Respond in JSON format:
 }`;
 
     const response = await client.chat.completions.create({
-      model: "gpt-4",
+      model: getOpenAIModel(),
       messages: [
         {
           role: "system",
@@ -400,13 +406,16 @@ export async function chatAboutCode(
   userMessage,
   language = "javascript",
 ) {
+  let lintResults = { errors: [] };
+  let mlAnalysis = { score: 0, risk_level: "Unknown" };
+
   try {
     const client = getOpenAIClient();
 
     if (!client) {
       return {
         response:
-          "Chat feature requires OPENAI_API_KEY to be configured. Please set OPENAI_API_KEY in your .env file.",
+          "I cannot reach the AI service right now, but I can still help from static analysis. Run the analysis tab for lint, AST, and ML findings, then ask a specific question about the issue you want to fix.",
         code_context: {
           quality_score: 0,
           risk_level: "Unknown",
@@ -416,8 +425,8 @@ export async function chatAboutCode(
     }
 
     // Quick lint + ML analysis
-    const lintResults = await ESLintService.lint(code, language);
-    const mlAnalysis = await callMLService(code);
+    lintResults = await ESLintService.lint(code, language);
+    mlAnalysis = await callMLService(code);
 
     const codeContext = `Code (${language}):
 \`\`\`
@@ -429,7 +438,7 @@ Risk Level: ${mlAnalysis.risk_level}
 Issues: ${lintResults.errors?.length || 0} found`;
 
     const response = await client.chat.completions.create({
-      model: "gpt-4",
+      model: getOpenAIModel(),
       messages: [
         {
           role: "system",
@@ -454,7 +463,34 @@ Issues: ${lintResults.errors?.length || 0} found`;
       },
     };
   } catch (error) {
-    throw new Error(`Chat analysis failed: ${error.message}`);
+    const quotaOrModelIssue =
+      error?.status === 429 ||
+      error?.status === 404 ||
+      String(error?.message || "").includes("quota") ||
+      String(error?.message || "").includes("model") ||
+      String(error?.message || "").includes("rate limit");
+
+    const issueCount = lintResults.errors?.length || 0;
+    const riskLabel = mlAnalysis.risk_level || "Unknown";
+    const scoreLabel = mlAnalysis.score ?? 0;
+
+    const fallbackResponse = quotaOrModelIssue
+      ? [
+          `I can't use the AI service right now, but the local pipeline is still available.`,
+          `Static analysis sees ${issueCount} issue${issueCount === 1 ? "" : "s"} and a ${riskLabel} risk profile.`,
+          `Quality score: ${scoreLabel}/100.`,
+          `Ask me a focused question like "Where is the bug?", "How can I simplify this?", or "What should I test?" and I will answer from the code context I can infer.`,
+        ].join(" ")
+      : `Chat analysis failed: ${error.message}`;
+
+    return {
+      response: fallbackResponse,
+      code_context: {
+        quality_score: scoreLabel,
+        risk_level: riskLabel,
+        issues_found: issueCount,
+      },
+    };
   }
 }
 
@@ -503,7 +539,7 @@ ${code}
     }
 
     const response = await client.chat.completions.create({
-      model: "gpt-4",
+      model: getOpenAIModel(),
       messages: [
         {
           role: "system",

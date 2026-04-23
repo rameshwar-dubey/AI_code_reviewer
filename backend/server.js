@@ -8,7 +8,6 @@ import cors from "cors";
 import dotenv from "dotenv";
 import analyzeRoutes from "./routes/analyzeRoutes.js";
 import questionRoutes from "./routes/questionRoutes.js";
-import chatRoutes from "./routes/chatRoutes.js";
 
 dotenv.config();
 
@@ -68,7 +67,6 @@ app.get("/", (req, res) => {
 });
 
 // API routes
-app.use("/api/chat", chatRoutes); // More specific routes first!
 app.use("/api", analyzeRoutes);
 app.use("/api/questions", questionRoutes);
 

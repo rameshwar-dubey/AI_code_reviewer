@@ -28,6 +28,9 @@ import {
   pipelineFixCode,
   saveQuestion,
 } from "./utils/api";
+import Navbar from "./components/Navbar";
+import Sidebar from "./components/Sidebar";
+import Footer from "./components/Footer";
 
 const languageOptions = [
   { value: "javascript", label: "JavaScript", monaco: "javascript" },
@@ -365,8 +368,12 @@ function RepoFileCard({ file, index }) {
   );
 }
 
-export default function App() {
-  const [language, setLanguage] = useState("javascript");
+const App = () => {
+  const [theme, setTheme] = useState("dark");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isRepoAnalyzerOpen, setIsRepoAnalyzerOpen] = useState(false);
+  const [conversations, setConversations] = useState([]);
+  const [currentConversationId, setCurrentConversationId] = useState(null);
   const [code, setCode] = useState(getSampleCode("javascript"));
   const [fileName, setFileName] = useState("starter.js");
   const [analysis, setAnalysis] = useState(null);
@@ -688,716 +695,364 @@ export default function App() {
   const activeIssues = safeArray(analysis?.issues);
 
   return (
-    <div className="app-shell">
-      <div className="app-shell__bg app-shell__bg--one" />
-      <div className="app-shell__bg app-shell__bg--two" />
-      <div className="app-shell__grid" />
+    <div className="flex h-screen bg-[var(--bg-0)] text-[var(--text-main)] font-sans">
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+        conversations={conversations}
+        currentId={currentConversationId}
+        onSelectConversation={handleSelectConversation}
+        onNewConversation={handleNewConversation}
+        onDeleteConversation={handleDeleteConversation}
+      />
 
-      <header className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 pt-5 md:px-6 lg:px-8">
-        <div className="flex items-center gap-3">
-          <div className="brand-mark">
-            <FiCode size={22} />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight text-white md:text-xl">
-              AI Code Reviewer Studio
-            </h1>
-            <p className="text-xs uppercase tracking-[0.28em] text-slate-400">
-              Visual code review workspace
-            </p>
-          </div>
-        </div>
+      <div className="flex flex-col flex-1 h-screen">
+        <Navbar
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+          onOpenRepoAnalyzer={() => setIsRepoAnalyzerOpen(true)}
+        />
 
-        <div className="hidden items-center gap-2 md:flex">
-          <span
-            className={`status-pill ${backendReady ? "status-pill--good" : "status-pill--bad"}`}
-          >
-            <span className="status-dot" />
-            {backendReady ? "Backend connected" : "Backend offline"}
-          </span>
-          <button
-            type="button"
-            className="ghost-button"
-            onClick={() => setActiveTab("chat")}
-          >
-            <FiMessageCircle size={16} />
-            Chat
-          </button>
-          <button
-            type="button"
-            className="ghost-button"
-            onClick={() => setActiveTab("repo")}
-          >
-            <FiGithub size={16} />
-            Repo analyzer
-          </button>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-7xl px-4 pb-8 pt-6 md:px-6 lg:px-8">
-        <section className="hero-panel">
-          <div className="hero-panel__copy">
-            <span className="eyebrow">
-              <FiZap size={14} />
-              Modern review workspace
-            </span>
-            <h2 className="hero-panel__title">
-              Turn raw code into a polished, readable, and safer result.
-            </h2>
-            <p className="hero-panel__description">
-              Upload a file, paste a snippet, or load a sample. The studio runs
-              the full pipeline, highlights issues, and gives you an optimized
-              edit path with a cleaner visual experience.
-            </p>
-
-            <div className="hero-panel__chips">
-              <span className="feature-chip">
-                <FiBarChart2 size={14} /> ML score
-              </span>
-              <span className="feature-chip">
-                <FiShield size={14} /> Risk analysis
-              </span>
-              <span className="feature-chip">
-                <FiCpu size={14} /> AI review
-              </span>
-              <span className="feature-chip">
-                <FiLayers size={14} /> Repo scan
-              </span>
-            </div>
-          </div>
-
-          <div className="hero-panel__metrics">
-            <MetricCard
-              label="Quality Score"
-              value={score ? `${score}/100` : "—"}
-              accent={score >= 80 ? "emerald" : score >= 60 ? "amber" : "rose"}
-              hint="ML-based quality estimate"
-            />
-            <MetricCard
-              label="Issues Found"
-              value={analysis ? issueCount : "—"}
-              accent="cyan"
-              hint="Lint, structural, and AI-detected issues"
-            />
-            <MetricCard
-              label="Risk"
-              value={riskLevel}
-              accent={riskTone}
-              hint={analysis?.summary?.recommendation || "Awaiting analysis"}
-            />
-          </div>
-        </section>
-
-        <section className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="space-y-6">
-            <Panel
-              title="Code Studio"
-              subtitle="Edit, upload, and run analysis from the same canvas."
-              icon={FiFileText}
-            >
-              <div className="studio-toolbar">
-                <div className="studio-toolbar__left">
-                  <label className="select-shell">
-                    <span>Language</span>
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex overflow-hidden">
+            {/* Main Content */}
+            <div className="flex-1 flex flex-col p-4 gap-4 overflow-y-auto">
+              {/* Code Editor and Controls */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="bg-[var(--surface)] rounded-2xl shadow-lg flex flex-col"
+              >
+                <div className="p-4 border-b border-[var(--line-soft)] flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FiCode className="text-teal-300" />
+                    <h2 className="font-semibold">Code Input</h2>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <select
                       value={language}
-                      onChange={(event) => {
-                        const nextLanguage = event.target.value;
-                        setLanguage(nextLanguage);
-                        setNotice(
-                          `Language set to ${getLanguageMeta(nextLanguage).label}.`,
-                        );
+                      onChange={(e) => {
+                        setLanguage(e.target.value);
+                        setCode(sampleCodeByLanguage[e.target.value]);
                       }}
+                      className="bg-transparent text-sm p-1 rounded"
                     >
-                      {languageOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
+                      {languageOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
                         </option>
                       ))}
                     </select>
-                  </label>
-
-                  <span className="meta-chip">
-                    <FiFileText size={14} />
-                    {fileName}
-                  </span>
-                  <span className="meta-chip">
-                    <FiCode size={14} />
-                    {lineCount} lines
-                  </span>
-                  <span className="meta-chip">
-                    <FiBarChart2 size={14} />
-                    {charCount} chars
-                  </span>
+                    <button
+                      onClick={handleFileUpload}
+                      className="p-2 hover:bg-[var(--bg-2)] rounded-lg transition-colors"
+                      title="Upload file"
+                    >
+                      <FiUpload size={16} />
+                    </button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </div>
                 </div>
-
-                <div className="studio-toolbar__right">
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={() => handleLoadSample(language)}
-                  >
-                    Load sample
-                  </button>
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <FiUpload size={16} />
-                    Upload
-                  </button>
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={handleCopyCode}
-                  >
-                    <FiCopy size={16} />
-                    Copy
-                  </button>
+                <div className="h-96">
+                  <MonacoEditor
+                    height="100%"
+                    language={
+                      languageOptions.find((l) => l.value === language)
+                        ?.monaco || "javascript"
+                    }
+                    value={code}
+                    onChange={(value) => setCode(value || "")}
+                    theme={theme === "dark" ? "vs-dark" : "light"}
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      wordWrap: "on",
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                    }}
+                  />
                 </div>
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".js,.jsx,.ts,.tsx,.py,.java,.cpp,.c,.cc,.hpp,.h"
-                className="hidden"
-                onChange={handleFileUpload}
-              />
-
-              <div className="editor-shell">
-                <MonacoEditor
-                  height="100%"
-                  language={getMonacoLanguage(language)}
-                  theme="vs-dark"
-                  value={code}
-                  onChange={(value) => setCode(value || "")}
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 14,
-                    lineNumbers: "on",
-                    roundedSelection: false,
-                    scrollBeyondLastLine: false,
-                    automaticLayout: true,
-                    padding: { top: 18, bottom: 18 },
-                    fontFamily:
-                      '"SFMono-Regular", "Cascadia Code", "Consolas", "Liberation Mono", monospace',
-                    cursorSmoothCaretAnimation: "on",
-                  }}
-                />
-              </div>
-
-              <div className="studio-footer">
-                <div className="studio-footer__status">
-                  <span className="status-chip">
-                    <span className="status-chip__dot" />
-                    {notice}
-                  </span>
-                  {copyState ? (
-                    <span className="status-chip status-chip--muted">
-                      {copyState}
-                    </span>
-                  ) : null}
-                </div>
-
-                <div className="studio-footer__actions">
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={handleFixCode}
-                    disabled={fixLoading}
-                  >
-                    {fixLoading ? (
-                      <FiRefreshCw className="spin-icon" size={16} />
-                    ) : (
-                      <FiZap size={16} />
-                    )}
-                    {fixLoading ? "Fixing" : "Auto fix"}
-                  </button>
-                  <button
-                    type="button"
-                    className="primary-button"
+                <div className="p-3 border-t border-[var(--line-soft)] flex items-center justify-end">
+                  <motion.button
                     onClick={handleAnalyze}
-                    disabled={loading}
+                    disabled={isLoading}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-slate-900 font-semibold rounded-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    whileHover={{ scale: isLoading ? 1 : 1.05 }}
+                    whileTap={{ scale: isLoading ? 1 : 0.95 }}
                   >
-                    {loading ? (
-                      <FiRefreshCw className="spin-icon" size={16} />
+                    {isLoading ? (
+                      <>
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{
+                            duration: 1,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
+                        >
+                          <FiCpu />
+                        </motion.div>
+                        <span>Analyzing...</span>
+                      </>
                     ) : (
-                      <FiPlay size={16} />
+                      <>
+                        <FiPlay />
+                        <span>Analyze Code</span>
+                      </>
                     )}
-                    {loading ? "Analyzing" : "Run analysis"}
+                  </motion.button>
+                </div>
+              </motion.div>
+
+              {/* Analysis Output */}
+              <AnimatePresence>
+                {analysis && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.5 }}
+                    className="bg-[var(--surface)] rounded-2xl shadow-lg flex flex-col"
+                  >
+                    <div className="p-4 border-b border-[var(--line-soft)] flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <FiBarChart2 className="text-amber-300" />
+                        <h2 className="font-semibold">Analysis Result</h2>
+                      </div>
+                      <button
+                        onClick={() =>
+                          copyToClipboard(JSON.stringify(analysis, null, 2))
+                        }
+                        className="p-2 hover:bg-[var(--bg-2)] rounded-lg transition-colors"
+                        title="Copy JSON"
+                      >
+                        <FiCopy size={16} />
+                      </button>
+                    </div>
+                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      {/* Metrics */}
+                      <div className="space-y-3">
+                        <h3 className="font-bold text-base mb-2 flex items-center gap-2">
+                          <FiZap /> Code Metrics
+                        </h3>
+                        <p>
+                          <strong>Complexity:</strong>{" "}
+                          <span className="font-mono bg-[var(--bg-1)] px-2 py-1 rounded">
+                            {analysis.metrics?.complexity}
+                          </span>
+                        </p>
+                        <p>
+                          <strong>Lines of Code:</strong>{" "}
+                          <span className="font-mono bg-[var(--bg-1)] px-2 py-1 rounded">
+                            {analysis.metrics?.loc}
+                          </span>
+                        </p>
+                      </div>
+
+                      {/* Linting */}
+                      <div className="space-y-3">
+                        <h3 className="font-bold text-base mb-2 flex items-center gap-2">
+                          <FiShield /> Linting Issues
+                        </h3>
+                        {analysis.linting?.length > 0 ? (
+                          <ul className="space-y-2">
+                            {analysis.linting.map((issue, i) => (
+                              <li key={i} className="flex items-start gap-2">
+                                <span className="text-red-400 mt-1">●</span>
+                                <div>
+                                  <p className="font-semibold">
+                                    {issue.message}
+                                  </p>
+                                  <p className="text-xs text-[var(--text-muted)]">
+                                    Line {issue.line}, Column {issue.column} (
+                                    {issue.ruleId})
+                                  </p>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-green-400">No issues found!</p>
+                        )}
+                      </div>
+
+                      {/* AST */}
+                      <div className="md:col-span-2 space-y-3">
+                        <h3 className="font-bold text-base mb-2 flex items-center gap-2">
+                          <FiLayers /> AST Explorer
+                        </h3>
+                        <div className="h-48 bg-[var(--bg-1)] rounded-lg p-2 overflow-auto">
+                          <pre className="text-xs">
+                            <code>{JSON.stringify(analysis.ast, null, 2)}</code>
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Chat Panel */}
+            <div className="w-[450px] border-l border-[var(--line-soft)] flex flex-col h-full">
+              <div className="p-4 border-b border-[var(--line-soft)]">
+                <h2 className="font-semibold flex items-center gap-2">
+                  <FiMessageCircle className="text-cyan-300" />
+                  AI Assistant
+                </h2>
+              </div>
+              <div
+                ref={chatContainerRef}
+                className="flex-1 p-4 space-y-4 overflow-y-auto"
+              >
+                {chatHistory.map((msg, index) => (
+                  <div
+                    key={index}
+                    className={`flex ${
+                      msg.role === "user" ? "justify-end" : "justify-start"
+                    }`}
+                  >
+                    <div
+                      className={`max-w-[85%] p-3 rounded-2xl ${
+                        msg.role === "user"
+                          ? "bg-teal-600 text-white rounded-br-none"
+                          : "bg-[var(--surface-elevated)] rounded-bl-none"
+                      }`}
+                    >
+                      <p className="text-sm">{msg.content}</p>
+                    </div>
+                  </div>
+                ))}
+                {isChatLoading && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[85%] p-3 rounded-2xl bg-[var(--surface-elevated)] rounded-bl-none">
+                      <div className="flex items-center gap-2 text-sm">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{
+                            duration: 1,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
+                        >
+                          <FiCpu />
+                        </motion.div>
+                        <span>Thinking...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="p-4 border-t border-[var(--line-soft)]">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && handleSendChat()}
+                    placeholder="Ask about the code..."
+                    className="w-full bg-[var(--bg-1)] rounded-xl p-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                  <button
+                    onClick={handleSendChat}
+                    disabled={isChatLoading || !chatInput.trim()}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-teal-500 text-slate-900 rounded-lg disabled:opacity-50"
+                  >
+                    <FiSend />
                   </button>
                 </div>
               </div>
-            </Panel>
-
-            <Panel
-              title="Session Insight"
-              subtitle="Quick visual summary of the active editor context."
-              icon={FiShield}
-              className="overflow-hidden"
-            >
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="glass-tile">
-                  <p className="glass-tile__label">Language</p>
-                  <p className="glass-tile__value">{meta.label}</p>
-                </div>
-                <div className="glass-tile">
-                  <p className="glass-tile__label">Backend</p>
-                  <p className="glass-tile__value">
-                    {backendReady ? "Connected" : "Offline"}
-                  </p>
-                </div>
-                <div className="glass-tile">
-                  <p className="glass-tile__label">Workspace</p>
-                  <p className="glass-tile__value">Review studio</p>
-                </div>
-              </div>
-              <div className="mt-4 rounded-[1.25rem] border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                {summaryBlurb}
-              </div>
-            </Panel>
+            </div>
           </div>
+        </main>
+        <Footer />
+      </div>
 
-          <div className="space-y-6">
-            <Panel
-              title="Results Console"
-              subtitle="One place for overview, issues, AI output, chat, and repository scans."
-              icon={FiBarChart2}
+      {/* Repo Analyzer Modal */}
+      <AnimatePresence>
+        {isRepoAnalyzerOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setIsRepoAnalyzerOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-[var(--surface-elevated)] w-full max-w-2xl rounded-2xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex flex-wrap gap-2 border-b border-white/10 px-1 pb-4">
-                <TabButton
-                  active={activeTab === "overview"}
-                  onClick={() => setActiveTab("overview")}
-                >
-                  Overview
-                </TabButton>
-                <TabButton
-                  active={activeTab === "issues"}
-                  onClick={() => setActiveTab("issues")}
-                >
-                  Issues {analysis ? `(${activeIssues.length})` : ""}
-                </TabButton>
-                <TabButton
-                  active={activeTab === "review"}
-                  onClick={() => setActiveTab("review")}
-                >
-                  AI review
-                </TabButton>
-                <TabButton
-                  active={activeTab === "chat"}
-                  onClick={() => setActiveTab("chat")}
-                >
-                  Chat
-                </TabButton>
-                <TabButton
-                  active={activeTab === "repo"}
-                  onClick={() => setActiveTab("repo")}
-                >
-                  Repo scan
-                </TabButton>
+              <div className="p-6 border-b border-[var(--line-soft)]">
+                <h2 className="text-xl font-bold flex items-center gap-3">
+                  <FiGithub className="text-teal-300" />
+                  Analyze GitHub Repository
+                </h2>
               </div>
-
-              <div className="pt-5">
-                <AnimatePresence mode="wait">
-                  {activeTab === "overview" ? (
-                    <motion.div
-                      key="overview"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      className="space-y-4"
-                    >
-                      {analysis?.error ? (
-                        <div className="rounded-[1.25rem] border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-100">
-                          {analysis.error}
-                        </div>
-                      ) : null}
-
-                      {analysis?.validation ? (
-                        <div className="rounded-[1.25rem] border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-50">
-                          <p className="font-semibold">Validation feedback</p>
-                          <ul className="mt-2 space-y-1 text-sm">
-                            {safeArray(analysis.validation.warnings).map(
-                              (warning, index) => (
-                                <li key={index}>• {warning}</li>
-                              ),
-                            )}
-                          </ul>
-                        </div>
-                      ) : null}
-
-                      {!analysis ? (
-                        <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-6 text-sm text-slate-300">
-                          <div className="flex items-center gap-2 text-slate-100">
-                            <FiCpu size={18} className="text-cyan-300" />
-                            <span className="font-semibold">
-                              No analysis yet
-                            </span>
-                          </div>
-                          <p className="mt-3 leading-7 text-slate-300">
-                            Run the pipeline to get a quality score, risk
-                            assessment, issue list, AI recommendations, and a
-                            corrected code path.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-4">
-                            <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
-                              Recommendation
-                            </p>
-                            <p className="mt-2 text-sm leading-7 text-slate-200">
-                              {analysis.summary?.recommendation ||
-                                "No recommendation returned."}
-                            </p>
-                          </div>
-                          <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-4">
-                            <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
-                              AI confidence
-                            </p>
-                            <p className="mt-2 text-2xl font-semibold text-white">
-                              {confidence !== null && confidence !== undefined
-                                ? `${confidence}`
-                                : "—"}
-                            </p>
-                            <p className="text-sm text-slate-400">
-                              Confidence returned by the pipeline
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <MetricCard
-                          label="ML Score"
-                          value={analysis ? `${score}/100` : "—"}
-                          accent={
-                            score >= 80
-                              ? "emerald"
-                              : score >= 60
-                                ? "amber"
-                                : "rose"
-                          }
-                          hint="Higher is better"
-                        />
-                        <MetricCard
-                          label="Risk Level"
-                          value={riskLevel}
-                          accent={riskTone}
-                          hint="Auto-generated risk assessment"
-                        />
-                        <MetricCard
-                          label="Issues"
-                          value={analysis ? activeIssues.length : "—"}
-                          accent="cyan"
-                          hint="Merged lint, AST, and AI results"
-                        />
-                        <MetricCard
-                          label="Lines"
-                          value={lineCount}
-                          accent="emerald"
-                          hint="Editor line count"
-                        />
-                      </div>
-                    </motion.div>
-                  ) : null}
-
-                  {activeTab === "issues" ? (
-                    <motion.div
-                      key="issues"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      className="space-y-3"
-                    >
-                      {!analysis ? (
-                        <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-5 text-sm text-slate-300">
-                          No issues to display yet. Run analysis to surface
-                          lint, structural, and AI-detected findings.
-                        </div>
-                      ) : activeIssues.length === 0 ? (
-                        <div className="rounded-[1.25rem] border border-emerald-500/30 bg-emerald-500/10 p-5 text-sm text-emerald-50">
-                          No issues surfaced in this run.
-                        </div>
-                      ) : (
-                        activeIssues.map((issue, index) => (
-                          <div
-                            key={`${issue.line || index}-${index}`}
-                            className={`rounded-[1.2rem] border p-4 ${issueTone(issue.severity || issue.level)}`}
-                          >
-                            <div className="flex items-start justify-between gap-4">
-                              <div>
-                                <p className="font-semibold text-white">
-                                  {issue.rule || issue.type || "Issue"}
-                                </p>
-                                <p className="mt-1 text-sm leading-6 text-slate-200">
-                                  {issue.message ||
-                                    issue.description ||
-                                    "The pipeline returned an issue without a message."}
-                                </p>
-                              </div>
-                              <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-slate-200">
-                                {issue.line ? `L${issue.line}` : "L?"}
-                                {issue.column ? ` • C${issue.column}` : ""}
-                              </span>
-                            </div>
-                            {issue.suggestion ? (
-                              <p className="mt-3 text-sm text-cyan-100">
-                                <span className="font-semibold">
-                                  Suggestion:{" "}
-                                </span>
-                                {issue.suggestion}
-                              </p>
-                            ) : null}
-                          </div>
-                        ))
-                      )}
-                    </motion.div>
-                  ) : null}
-
-                  {activeTab === "review" ? (
-                    <motion.div
-                      key="review"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      className="space-y-4"
-                    >
-                      {!analysis ? (
-                        <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-5 text-sm text-slate-300">
-                          AI review will appear here after analysis.
-                        </div>
-                      ) : (
-                        <>
-                          <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-5 text-sm text-slate-200 leading-7">
-                            {analysis.review.explanation ||
-                              "No review explanation returned."}
-                          </div>
-
-                          <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-5">
-                            <div className="flex items-center justify-between gap-4">
-                              <h3 className="text-sm font-semibold text-white">
-                                AI suggestions
-                              </h3>
-                              {analysis.review.optimized_code ? (
-                                <button
-                                  type="button"
-                                  className="ghost-button"
-                                  onClick={handleCopyCode}
-                                >
-                                  <FiCopy size={16} />
-                                  Copy current code
-                                </button>
-                              ) : null}
-                            </div>
-                            <ul className="mt-4 space-y-2 text-sm text-slate-300">
-                              {safeArray(analysis.review.suggestions).length >
-                              0 ? (
-                                safeArray(analysis.review.suggestions).map(
-                                  (suggestion, index) => (
-                                    <li
-                                      key={index}
-                                      className="flex items-start gap-3"
-                                    >
-                                      <FiChevronRight
-                                        className="mt-0.5 shrink-0 text-cyan-300"
-                                        size={16}
-                                      />
-                                      <span>{suggestion}</span>
-                                    </li>
-                                  ),
-                                )
-                              ) : (
-                                <li className="text-slate-400">
-                                  No structured suggestions were returned.
-                                </li>
-                              )}
-                            </ul>
-                          </div>
-
-                          <div className="rounded-[1.25rem] border border-white/10 bg-black/30 p-4">
-                            <div className="flex items-center justify-between gap-3 pb-3">
-                              <p className="text-sm font-semibold text-white">
-                                Optimized code preview
-                              </p>
-                              {analysis.review.optimized_code ? (
-                                <span className="text-xs text-slate-400">
-                                  Editable output
-                                </span>
-                              ) : null}
-                            </div>
-                            <pre className="max-h-[280px] overflow-auto whitespace-pre-wrap rounded-[1rem] border border-white/10 bg-slate-950/80 p-4 text-xs leading-6 text-slate-200">
-                              {analysis.review.optimized_code ||
-                                "No optimized code returned yet."}
-                            </pre>
-                          </div>
-                        </>
-                      )}
-                    </motion.div>
-                  ) : null}
-
-                  {activeTab === "chat" ? (
-                    <motion.div
-                      key="chat"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      className="space-y-4"
-                    >
-                      <div className="space-y-3 rounded-[1.25rem] border border-white/10 bg-white/5 p-4">
-                        <div className="max-h-[340px] space-y-3 overflow-y-auto pr-1">
-                          {chatMessages.map((message, index) => (
-                            <ChatBubble
-                              key={`${message.role}-${index}`}
-                              role={message.role}
-                              text={message.text}
-                              meta={message.meta}
-                            />
-                          ))}
-                          <div ref={chatEndRef} />
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          {quickQuestions.map((question) => (
-                            <button
-                              key={question}
-                              type="button"
-                              className="quick-question"
-                              onClick={() => handleAskQuestion(question)}
-                            >
-                              {question}
-                            </button>
-                          ))}
-                        </div>
-
-                        <div className="flex flex-col gap-3 sm:flex-row">
-                          <input
-                            value={chatInput}
-                            onChange={(event) =>
-                              setChatInput(event.target.value)
-                            }
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter" && !event.shiftKey) {
-                                event.preventDefault();
-                                handleAskQuestion();
-                              }
-                            }}
-                            placeholder="Ask about bugs, readability, tests, or architecture..."
-                            className="studio-input flex-1"
-                          />
-                          <button
-                            type="button"
-                            className="primary-button"
-                            onClick={() => handleAskQuestion()}
-                          >
-                            <FiSend size={16} />
-                            Send
-                          </button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ) : null}
-
-                  {activeTab === "repo" ? (
-                    <motion.div
-                      key="repo"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      className="space-y-4"
-                    >
-                      <form
-                        className="space-y-3 rounded-[1.25rem] border border-white/10 bg-white/5 p-4"
-                        onSubmit={(event) => {
-                          event.preventDefault();
-                          handleRepoAnalyze();
+              <div className="p-6 space-y-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={repoUrl}
+                    onChange={(e) => setRepoUrl(e.target.value)}
+                    placeholder="https://github.com/owner/repo"
+                    className="w-full bg-[var(--bg-1)] rounded-xl p-4 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                  <FiExternalLink className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                </div>
+                <motion.button
+                  onClick={handleRepoAnalysis}
+                  disabled={isRepoLoading}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-slate-900 font-semibold rounded-lg shadow-md disabled:opacity-50"
+                  whileHover={{ scale: isRepoLoading ? 1 : 1.02 }}
+                  whileTap={{ scale: isRepoLoading ? 1 : 0.98 }}
+                >
+                  {isRepoLoading ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: "linear",
                         }}
                       >
-                        <label className="block text-xs uppercase tracking-[0.2em] text-slate-500">
-                          GitHub repository URL
-                        </label>
-                        <div className="flex flex-col gap-3 sm:flex-row">
-                          <input
-                            value={repoUrl}
-                            onChange={(event) => setRepoUrl(event.target.value)}
-                            placeholder="https://github.com/owner/repo"
-                            className="studio-input flex-1"
-                          />
-                          <button
-                            type="submit"
-                            className="primary-button"
-                            disabled={repoLoading}
-                          >
-                            {repoLoading ? (
-                              <FiRefreshCw className="spin-icon" size={16} />
-                            ) : (
-                              <FiSearch size={16} />
-                            )}
-                            {repoLoading ? "Scanning" : "Analyze repo"}
-                          </button>
-                        </div>
-                        {repoError ? (
-                          <div className="rounded-[1rem] border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-100">
-                            {repoError}
-                          </div>
-                        ) : null}
-                      </form>
-
-                      {!repoResult ? (
-                        <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-5 text-sm text-slate-300">
-                          Enter a GitHub repository URL to inspect files,
-                          issues, and basic stats.
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-5">
-                            <h3 className="text-sm font-semibold text-white">
-                              {repoResult.repository?.owner || "Repository"}/
-                              {repoResult.repository?.repo || "analysis"}
-                            </h3>
-                            <p className="mt-2 text-sm text-slate-300">
-                              {repoResult.totalFilesAnalyzed || 0} files
-                              analyzed
-                            </p>
-                            {repoResult.repository?.url ? (
-                              <a
-                                href={repoResult.repository.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="mt-3 inline-flex items-center gap-2 text-sm text-cyan-300"
-                              >
-                                Open repository <FiExternalLink size={14} />
-                              </a>
-                            ) : null}
-                          </div>
-
-                          <div className="space-y-3">
-                            {safeArray(repoResult.files).length > 0 ? (
-                              safeArray(repoResult.files).map((file, index) => (
-                                <RepoFileCard
-                                  key={`${file.name || file.path || index}-${index}`}
-                                  file={file}
-                                  index={index}
-                                />
-                              ))
-                            ) : (
-                              <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-5 text-sm text-slate-300">
-                                No file-level results were returned.
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </motion.div>
-                  ) : null}
-                </AnimatePresence>
+                        <FiCpu />
+                      </motion.div>
+                      <span>Analyzing Repository...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiSearch />
+                      <span>Start Analysis</span>
+                    </>
+                  )}
+                </motion.button>
               </div>
-            </Panel>
-          </div>
-        </section>
-      </main>
+              {repoAnalysisResult && (
+                <div className="p-6 border-t border-[var(--line-soft)]">
+                  <h3 className="font-bold mb-2">Analysis Complete:</h3>
+                  <div className="h-64 bg-[var(--bg-1)] rounded-lg p-2 overflow-auto">
+                    <pre className="text-xs">
+                      <code>{JSON.stringify(repoAnalysisResult, null, 2)}</code>
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
-}
+};
+
+export default App;
